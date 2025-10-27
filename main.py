@@ -34,11 +34,11 @@ def pipeline_run(claim: str):
         "label": None,  # futuramente: Supported / Refuted / Unclear
     }
 
-    with open("data/output/results.json", "w", encoding="utf-8") as f:
+    with open("data/results.json", "w", encoding="utf-8") as f:
         json.dump(final_result, f, indent=4, ensure_ascii=False)
 
     print("\n🎯 Pipeline concluído com sucesso!")
-    print("📁 Resultados salvos em: data/output/results.json")
+    print("📁 Resultados salvos em: data/results.json")
 
     return final_result
 

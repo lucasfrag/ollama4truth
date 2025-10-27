@@ -1,6 +1,7 @@
 import subprocess
 import json
 import os
+import re
 from datetime import datetime
 from dotenv import load_dotenv
 
@@ -49,7 +50,13 @@ Saída obrigatória: JSON no formato exato abaixo (sem texto explicativo, sem co
 }}
 """
 
-    output = run_ollama(prompt, model=model)
+    output = run_ollama(prompt, model=model).strip()
+    
+    # Tentar extrair apenas o bloco JSON
+    json_match = re.search(r'\{[\s\S]*\}', output)
+    if json_match:
+        output = json_match.group(0)
+
 
     try:
         parsed = json.loads(output)
