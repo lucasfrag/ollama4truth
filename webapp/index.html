@@ -1,25 +1,41 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ollama4Truth 🔎</title>
     <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
-    <div class="container">
-        <h1>🧠 Ollama4Truth</h1>
-        <p>Digite uma <strong>claim</strong> e veja a análise automática com IA.</p>
+    <div class="dashboard-container">
+        <header>
+            <h1>🧠 Ollama4Truth</h1>
+            <p>Digite uma <strong>claim</strong> e veja a análise automática com IA.</p>
+            <form id="claimForm">
+                <input type="text" id="claimInput" placeholder="Ex: O café ajuda a melhorar a memória de longo prazo."
+                    required>
+                <button type="submit">Analisar</button>
+            </form>
+            <div id="loading" class="hidden">⏳ Processando claim...</div>
+        </header>
 
-        <form id="claimForm">
-            <input type="text" id="claimInput" placeholder="Ex: O café ajuda a melhorar a memória de longo prazo." required>
-            <button type="submit">Analisar</button>
-        </form>
+        <div class="dashboard">
+            <aside id="sidebar" class="hidden">
+                <h2>Perguntas</h2>
+                <ul id="questionList"></ul>
+                <div id="summary" class="summary"></div> <!-- Novo: resumo -->
+            </aside>
 
-        <div id="loading" class="hidden">⏳ Processando claim... isso pode levar alguns segundos...</div>
-        <pre id="result" class="hidden"></pre>
+
+            <main id="result" class="hidden">
+                <!-- Claim e evidências aparecerão aqui -->
+            </main>
+        </div>
     </div>
 
     <script src="script.js"></script>
 </body>
+
 </html>
