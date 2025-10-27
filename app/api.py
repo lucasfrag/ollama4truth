@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from app.main import pipeline_run
 import uvicorn
@@ -7,6 +8,15 @@ app = FastAPI(
     title="Averitec Custom Pipeline API",
     description="API para verificar claims e gerar evidências automaticamente usando Ollama + Google Search",
     version="1.0.0",
+)
+
+# 🔹 Permitir requisições do frontend local
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # ou ["http://localhost:8080"] se quiser limitar
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # Modelo de entrada
