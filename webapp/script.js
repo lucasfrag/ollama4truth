@@ -62,6 +62,11 @@ function renderClaim(data) {
         );
         labelEl.textContent = data.label;
         result.appendChild(labelEl);
+    } else {
+        const labelEl = document.createElement("span");
+        labelEl.classList.add("label-badge", "label-uncertain"); // usa classe "incerto"
+        labelEl.textContent = "Sem evidências suficientes";
+        result.appendChild(labelEl);
     }
 }
 
