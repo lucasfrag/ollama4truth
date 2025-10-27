@@ -1,0 +1,106 @@
+{
+    "claim": "O café ajuda a melhorar a memória de longo prazo.",
+    "timestamp": "2025-10-27T09:23:23.660287",
+    "questions": {
+        "claim": "O café ajuda a melhorar a memória de longo prazo.",
+        "questions": [
+            "Quais são os mecanismos biológicos que se acredita que o café pode influenciar na memória?",
+            "Existe pesquisa científica que demonstre uma correlação direta entre o consumo de café e a melhora da memória de longo prazo?",
+            "Quais os tipos de café (como intensidade e composição) têm o maior impacto na função cognitiva, incluindo memória?"
+        ],
+        "timestamp": "2025-10-27T12:23:17.054944"
+    },
+    "evidences": [
+        {
+            "question": "Quais são os mecanismos biológicos que se acredita que o café pode influenciar na memória?",
+            "results": [
+                {
+                    "title": "A insônia crônica não é apenas “perder o sono”, ela pode acelerar o ...",
+                    "link": "https://www.instagram.com/p/DPOtNaQjtBw/",
+                    "snippet": "Sep 30, 2025 ... Por outro lado, dormir mais do que o habitual esteve associado a menor carga de lesões vasculares no cérebro. Mecanismos envolvidos: ✓ A insônia ..."
+                },
+                {
+                    "title": "questões comentadas - dor",
+                    "link": "https://drpedroneuro.com.br/_files/view.php/download/blogpost/111/53cd230242026.pdf",
+                    "snippet": "International Headache Society Board of Trustees. Mestre e. Doutor em Neurologia, Universidade de São Paulo. Ex-Presidente da Sociedade Brasileira de. Cefaleia."
+                },
+                {
+                    "title": "SciELO Brazil - Neurobiologia das emoções Neurobiologia das ...",
+                    "link": "https://www.scielo.br/j/rpc/a/t55bGGSRTmSVTgrbWvqnPTk/",
+                    "snippet": "A partir de então, realizaram-se inúmeras investigações, as quais culminaram na proposição dos mecanismos envolvidos na percepção, atenção e memória. ... Pode-se ..."
+                },
+                {
+                    "title": "o cuidado das condições crônicas na atenção primária à saúde: o ...",
+                    "link": "https://bvsms.saude.gov.br/bvs/publicacoes/cuidado_condicoes_atencao_primaria_saude.pdf",
+                    "snippet": "As iniciativas do Conass para fortalecer a APS vêm se dando por meio de dis ... Só, assim, ela poderá coordenar as redes de atenção à saúde e ..."
+                },
+                {
+                    "title": "O Direito Humano à Alimentação Adequada e 0 Sistema Nacional ...",
+                    "link": "https://www.mds.gov.br/webarquivos/publicacao/seguranca_alimentar/DHAA_SAN.pdf",
+                    "snippet": "as leis, as instituições públicas e a forma como se pode exigir os direitos. ... É assim que se pode influenciar o processo de formulação de uma política ..."
+                }
+            ]
+        },
+        {
+            "question": "Existe pesquisa científica que demonstre uma correlação direta entre o consumo de café e a melhora da memória de longo prazo?",
+            "results": [
+                {
+                    "title": "Diretrizes Brasileiras de Hipertensão Arterial – 2020 - PMC",
+                    "link": "https://pmc.ncbi.nlm.nih.gov/articles/PMC9949730/",
+                    "snippet": "... e em prazo mais longo de tratamento representam extrapolações da evidência científica ... correlação direta entre níveis de PTH e calcemia com a gravidade da HA."
+                },
+                {
+                    "title": "Sociedade e Economia: estratégias de crescimento e ...",
+                    "link": "https://repositorio.ipea.gov.br/bitstreams/abbfc205-252e-43c8-8d0e-d7d448027bab/download",
+                    "snippet": "A vinculação no longo prazo entre os dois fatos. (consumo de energia e PIB) é estreita e inevitável. A trajetória das duas variáveis dentro dos países ..."
+                },
+                {
+                    "title": "O Direito Humano à Alimentação Adequada e 0 Sistema Nacional ...",
+                    "link": "https://www.mds.gov.br/webarquivos/publicacao/seguranca_alimentar/DHAA_SAN.pdf",
+                    "snippet": "• Não existem estudos ou pesquisas de médio e longo prazo que garantam que os alimentos ... • Por outro lado, o consumo alimentar encontra relação direta com a ..."
+                },
+                {
+                    "title": "Diretrizes da UICN CSE sobre conflitos e coexistência entre ...",
+                    "link": "https://portals.iucn.org/library/sites/library/files/documents/2023-009-Pt.pdf",
+                    "snippet": "Raramente há uma relação direta entre os níveis de impacto documentados e as percepções locais ... restrições, podem ser cruciais na pesquisa ecológica de longo ..."
+                },
+                {
+                    "title": "Alimentação saudável",
+                    "link": "https://bvsms.saude.gov.br/bvs/publicacoes/alimentacao_saudavel.pdf",
+                    "snippet": "Existe uma relação direta entre nutrição, saúde e bem-estar físico e mental do indivíduo. As pesquisas comprovam que a boa alimentação tem um papel ..."
+                }
+            ]
+        },
+        {
+            "question": "Quais os tipos de café (como intensidade e composição) têm o maior impacto na função cognitiva, incluindo memória?",
+            "results": [
+                {
+                    "title": "Avaliação Multidimensional do Idoso - 11.09.2018",
+                    "link": "https://www.saude.pr.gov.br/sites/default/arquivos_restritos/files/documento/2020-04/avaliacaomultiddoidoso_2018_atualiz.pdf",
+                    "snippet": "Sep 11, 2018 ... O processo de sarcopenia, compreendida como redução da massa muscular, é resultante das alterações neurendócrinas do envelhecimento, responsável ..."
+                },
+                {
+                    "title": "Diretrizes Brasileiras de Hipertensão Arterial – 2020 - PMC",
+                    "link": "https://pmc.ncbi.nlm.nih.gov/articles/PMC9949730/",
+                    "snippet": "A ingestão de café a longo prazo não tem sido associada a maior incidência de HA. ... A associação sacubitrila/valsartana é uma nova opção de tratamento com ..."
+                },
+                {
+                    "title": "o cuidado das condições crônicas na atenção primária à saúde: o ...",
+                    "link": "https://bvsms.saude.gov.br/bvs/publicacoes/cuidado_condicoes_atencao_primaria_saude.pdf",
+                    "snippet": "... memória da Profa Barbara Starfield por sua luta pela me- lhoria da ... O autor é um estudioso e uma das maiores referências para os temas, Rede de."
+                },
+                {
+                    "title": "UNIVERSIDADE DE LISBOA Faculdade de Medicina Impacto da ...",
+                    "link": "https://repositorio.ulisboa.pt/bitstream/10451/53928/1/12737_Tese.pdf",
+                    "snippet": "Impacto da Diabetes Mellitus tipo 2 na função cognitiva. Patrícia da Costa Moura. Orientadores: Prof. Doutora Sónia Isabel do Vale Fernandes. Mestre Paula ..."
+                },
+                {
+                    "title": "Envelhecimento e saúde da pessoa idosa",
+                    "link": "https://bvsms.saude.gov.br/bvs/publicacoes/abcad19.pdf",
+                    "snippet": "Quedas com impacto direto sobre quadril e punho têm maior probabilidade de ... cognitivas, incluindo memória, atenção e aprendizado, pensamento, orientação,."
+                }
+            ]
+        }
+    ],
+    "label": null
+}
