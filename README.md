@@ -32,7 +32,7 @@ pip install -r requirements.txt
 
 1. Start the server:
 ````
-uvicorn app.api:app --reload
+uvicorn api:app --reload
 ````
 ---
 
