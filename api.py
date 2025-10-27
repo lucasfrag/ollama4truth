@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from app.main import pipeline_run
+from main import pipeline_run
 import uvicorn
 
 app = FastAPI(
