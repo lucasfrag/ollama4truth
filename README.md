@@ -14,7 +14,7 @@ This project aims to explore, evaluate, and democratize the use of open-source L
 
 ---
 
-## Configuration
+## ⚙️ Configuration
 
 1. Install Ollama and download any model:
 ````
@@ -49,7 +49,7 @@ uvicorn api:app --reload
 }
 ````
 
-## ⚙️ Technologies
+## 🖥️ Technologies
 
 - 🦙 **[Ollama](https://ollama.com)** — local LLM inference  
 - 🔍 **Google Search API** — open evidence retrieval  
