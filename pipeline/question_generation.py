@@ -1,30 +1,34 @@
 import subprocess
 import json
 import os
+from datetime import datetime
+from dotenv import load_dotenv
+
+load_dotenv()
 
 def run_ollama(prompt: str, model: str = None) -> str:
     """
     Executa um modelo Ollama localmente e retorna a resposta em texto.
     """
     model = model or os.getenv("OLLAMA_MODEL", "llama3.1")
+
     try:
         result = subprocess.run(
             ["ollama", "run", model],
-            input=prompt.encode("utf-8"),      # 🔹 envia prompt codificado
-            text=False,                        # 🔹 desativa modo texto
+            input=prompt.encode("utf-8"),
+            text=False,
             capture_output=True,
             check=True
         )
-
-        # 🔹 decodifica saída explicitamente como UTF-8
         return result.stdout.decode("utf-8", errors="ignore").strip()
 
     except subprocess.CalledProcessError as e:
         print("❌ Erro ao executar Ollama:", e.stderr)
         return ""
+
 def generate_questions(claim: str, model: str = None) -> list:
     """
-    Gera perguntas investigativas com base na claim.
+    Gera perguntas investigativas com base na claim e retorna uma lista de perguntas.
     """
     prompt = f"""
 Você é um assistente de checagem de fatos. 
@@ -47,13 +51,26 @@ Saída obrigatória: JSON no formato exato abaixo (sem texto explicativo, sem co
 
     output = run_ollama(prompt, model=model)
 
-    # Tenta extrair JSON se o modelo gerar texto fora do formato esperado
     try:
-        questions = json.loads(output)
-        if isinstance(questions, dict):
-            questions = list(questions.values())
+        parsed = json.loads(output)
+        if isinstance(parsed, dict) and "questions" in parsed:
+            questions = parsed["questions"]
+        elif isinstance(parsed, list):
+            questions = parsed
+        else:
+            questions = list(parsed.values())
     except json.JSONDecodeError:
-        # fallback: separar por linhas ou traços
         questions = [q.strip("-• ") for q in output.split("\n") if len(q.strip()) > 3]
 
-    return questions
+    # 🔹 Agora retorna um dict padronizado
+    return {
+        "claim": claim,
+        "questions": questions,
+        "timestamp": datetime.utcnow().isoformat()
+    }
+
+# 🔹 o bloco abaixo é só para testes manuais — não interfere no pipeline
+if __name__ == "__main__":
+    claim = "O café ajuda a melhorar a memória de longo prazo."
+    questions = generate_questions(claim)
+    print(json.dumps({"claim": claim, "questions": questions}, indent=4, ensure_ascii=False))

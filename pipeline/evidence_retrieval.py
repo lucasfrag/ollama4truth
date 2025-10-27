@@ -11,6 +11,7 @@ load_dotenv()
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 GOOGLE_CX = os.getenv("GOOGLE_CSE_ID")  # ID do mecanismo de busca customizado
 
+
 def google_search(query: str, num_results: int = 5):
     """
     Executa uma busca no Google Custom Search e retorna os resultados relevantes.
@@ -38,9 +39,11 @@ def google_search(query: str, num_results: int = 5):
         print(f"[ERRO] Falha ao buscar '{query}': {e}")
         return []
 
-def retrieve_evidence(claim: str, questions: list, output_path: str = "data/output/evidence_results.json"):
+
+def retrieve_evidence(claim: str, questions: list) -> dict:
     """
     Busca evidências online para cada pergunta relacionada à claim.
+    Retorna um dicionário com todas as evidências, sem salvar em arquivo.
     """
     all_evidence = {
         "claim": claim,
@@ -57,14 +60,7 @@ def retrieve_evidence(claim: str, questions: list, output_path: str = "data/outp
         })
         time.sleep(1.5)  # evita limite de requisições
 
-    # Cria pasta de saída se não existir
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
-
-    # Salva em JSON
-    with open(output_path, "w", encoding="utf-8") as f:
-        json.dump(all_evidence, f, indent=4, ensure_ascii=False)
-
-    print(f"[SUCESSO] Evidências salvas em {output_path}")
+    print(f"[SUCESSO] Evidências coletadas para claim: {claim}")
     return all_evidence
 
 
@@ -76,4 +72,6 @@ if __name__ == "__main__":
         "Há estudos científicos que confirmam essa relação?",
         "A cafeína influencia processos de consolidação de memória?"
     ]
-    retrieve_evidence(claim, questions)
+
+    data = retrieve_evidence(claim, questions)
+    print(json.dumps(data, indent=4, ensure_ascii=False))
