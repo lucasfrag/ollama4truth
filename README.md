@@ -16,16 +16,22 @@ This project aims to explore, evaluate, and democratize the use of open-source L
 
 ## Configuration
 
-1. Create a .env file:
+1. Install Ollama and download any model:
 ````
-OLLAMA_MODEL=llama3.1
-GOOGLE_API_KEY=YOUR_GOOGLE_API_KEY
-GOOGLE_CSE_ID=YOUR_CSE_ID
+curl -fsSL https://ollama.com/install.sh | sh
+ollama run gemma3:1b
 ````
 
 2. Install requirements (with Python 3.10):
 ````
 pip install -r requirements.txt
+````
+
+3. Create a .env file:
+````
+OLLAMA_MODEL=gemma3:1b
+GOOGLE_API_KEY=YOUR_GOOGLE_API_KEY
+GOOGLE_CSE_ID=YOUR_CSE_ID
 ````
 
 ## 🚀 How to run?
