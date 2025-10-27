@@ -14,6 +14,35 @@ This project aims to explore, evaluate, and democratize the use of open-source L
 
 ---
 
+## Configuration
+
+1. Create a .env file:
+````
+OLLAMA_MODEL=llama3.1
+GOOGLE_API_KEY=YOUR_GOOGLE_API_KEY
+GOOGLE_CSE_ID=YOUR_CSE_ID
+````
+
+2. Install requirements (with Python 3.10):
+````
+pip install -r requirements.txt
+````
+
+## 🚀 How to run?
+
+1. Start the server:
+````
+uvicorn app.api:app --reload
+````
+---
+
+2. Send a POST request to http://localhost:8000/analyze with the claim:
+````
+{
+  "claim": "O café ajuda a melhorar a memória de longo prazo."
+}
+````
+
 ## ⚙️ Technologies
 
 - 🦙 **[Ollama](https://ollama.com)** — local LLM inference  
