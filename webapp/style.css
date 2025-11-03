@@ -230,3 +230,11 @@ main {
     padding: 5px 10px;
     border-radius: 12px;
 }
+
+.log-box {
+    color: #333;
+    font-family: monospace;
+    padding: 10px;
+    overflow-y: auto;
+    
+}
