@@ -51,11 +51,14 @@ Com base nessas evidências, classifique a claim em uma das categorias abaixo:
 
 Explique brevemente o motivo da classificação.
 
+Além disso, indique um nível de confiança numérico (0 a 100%) para a classificação.
+
 Saída obrigatória: JSON no formato abaixo, sem texto adicional:
 
 {{
   "classification": "<Supported | Refuted | Not Enough Evidence | Conflicting Evidence/Cherry-picking>",
-  "justification": "Texto explicativo curto"
+  "justification": "Texto explicativo curto",
+  "confidence": <0-100>
 }}
 """
 
@@ -82,6 +85,7 @@ Saída obrigatória: JSON no formato abaixo, sem texto adicional:
         "claim": claim,
         "classification": classification,
         "justification": justification,
+        "confidence": parsed.get("confidence", 0),
         "timestamp": datetime.utcnow().isoformat()
     }
 

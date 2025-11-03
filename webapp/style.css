@@ -186,3 +186,47 @@ main {
         width: 100%;
     }
 }
+
+.claim-timestamp {
+    font-style: italic;
+}
+
+.rationale {
+    font-size: 0.95rem;
+}
+
+#summary h3 {
+    margin-top: 0;
+    font-size: 1rem;
+    color: #1e2a38;
+    margin-bottom: 10px;
+}
+
+#summary ul {
+    padding-left: 15px;
+}
+
+.claim-timestamp {
+    font-style: italic;
+    font-size: 0.85rem;
+    color: #666;
+    margin-bottom: 10px;
+}
+
+.rationale {
+    margin-top: 15px;
+    background: #f0f9ff;
+    padding: 10px;
+    border-radius: 8px;
+    color: #1e3a8a;
+}
+
+.confidence {
+    margin-top: 5px;
+    font-weight: bold;
+    color: #0f5132;
+    background-color: #d1e7dd;
+    display: inline-block;
+    padding: 5px 10px;
+    border-radius: 12px;
+}

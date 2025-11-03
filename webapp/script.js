@@ -44,7 +44,7 @@ form.addEventListener("submit", async (e) => {
 });
 
 // Renderiza a claim e badge de status
-function renderClaim(data) {
+/*function renderClaim(data) {
     result.innerHTML = "";
 
     const claimEl = document.createElement("div");
@@ -56,11 +56,12 @@ function renderClaim(data) {
         const labelEl = document.createElement("span");
         labelEl.classList.add("label-badge");
         labelEl.classList.add(
-            data.label.toLowerCase() === "supported" ? "label-supported" :
-            data.label.toLowerCase() === "refuted" ? "label-refuted" :
+            data.label.toUpperCase() === "SUPPORTED" ? "label-supported" :
+            data.label.toUpperCase() === "REFUTED" ? "label-refuted" :
+            data.label.toUpperCase() === "NOT ENOUGH EVIDENCE" ? "label-uncertain" :
             "label-uncertain"
         );
-        labelEl.textContent = data.label;
+        labelEl.textContent = data.label.toUpperCase();
         result.appendChild(labelEl);
     } else {
         const labelEl = document.createElement("span");
@@ -68,6 +69,76 @@ function renderClaim(data) {
         labelEl.textContent = "Sem evidências suficientes";
         result.appendChild(labelEl);
     }
+}
+*/
+
+// Renderiza a claim e badge de status
+function renderClaim(data) {
+    result.innerHTML = "";
+
+    // Claim
+    const claimEl = document.createElement("div");
+    claimEl.classList.add("claim-title");
+    claimEl.textContent = "📝 " + data.claim;
+    result.appendChild(claimEl);
+
+    // Timestamp da análise
+    if (data.timestamp) {
+        const tsEl = document.createElement("div");
+        tsEl.classList.add("claim-timestamp");
+        const date = new Date(data.timestamp);
+        tsEl.textContent = `Analisado em: ${date.toLocaleString()}`;
+        result.appendChild(tsEl);
+    }
+
+    // Label
+    const labelEl = document.createElement("span");
+    labelEl.classList.add("label-badge");
+    if (data.label) {
+        labelEl.classList.add(
+            data.label.toUpperCase() === "SUPPORTED" ? "label-supported" :
+            data.label.toUpperCase() === "REFUTED" ? "label-refuted" :
+            data.label.toUpperCase() === "NOT ENOUGH EVIDENCE" ? "label-uncertain" :
+            "label-uncertain"
+        );
+        labelEl.textContent = data.label.toUpperCase();
+    } else {
+        labelEl.classList.add("label-uncertain");
+        labelEl.textContent = "Sem evidências suficientes";
+    }
+    result.appendChild(labelEl);
+
+    // Confidence
+    if (data.confidence !== null && data.confidence !== undefined) {
+        const confEl = document.createElement("div");
+        confEl.classList.add("confidence");
+        confEl.textContent = `Confiança: ${data.confidence}%`;
+        confEl.style.marginLeft = "5px";
+        result.appendChild(confEl);
+    }
+
+    // Rationale
+    if (data.rationale) {
+        const rationaleEl = document.createElement("p");
+        rationaleEl.classList.add("rationale");
+        rationaleEl.textContent = "💡 " + data.rationale;
+        rationaleEl.style.fontWeight = "bold";
+        result.appendChild(rationaleEl);
+    }
+}
+
+// Renderiza resumo de evidências na sidebar
+function renderSummary() {
+    const summaryDiv = document.getElementById("summary");
+    summaryDiv.innerHTML = "<h3>Resumo de Evidências</h3>";
+    const ul = document.createElement("ul");
+    currentData.questions.questions.forEach(q => {
+        const li = document.createElement("li");
+        li.textContent = `${q} → ${getEvidenceCount(q)} evidências`;
+        li.style.marginBottom = "5px";
+        ul.appendChild(li);
+    });
+    summaryDiv.appendChild(ul);
 }
 
 // Renderiza a lista de perguntas na sidebar
