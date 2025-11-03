@@ -1,10 +1,10 @@
 import json
 from datetime import datetime
-from pipeline.question_generation import generate_questions
-from pipeline.evidence_retrieval import retrieve_evidence
-# (futuramente) from core.classification import classify_claim
+from pipeline.generate_questions import generate_questions
+from pipeline.retrieve_evidence import retrieve_evidence
+from pipeline.classification import classify_claim
 
-def pipeline_run(claim: str):
+def run_pipeline(claim: str):
     """
     Executa o pipeline completo:
     1. Geração de perguntas
@@ -22,8 +22,8 @@ def pipeline_run(claim: str):
     # === 2️⃣ Buscar evidências ===
     evidence_output = retrieve_evidence(claim, questions)
 
-    # === 3️⃣ (futuro) Classificação ===
-    # result = classify_claim(claim, evidence_output)
+    # === 3️⃣ Classificação ===
+    classification_output = classify_claim(claim, evidence_output.get("evidences", []))
 
     # === Salvar tudo em um JSON final ===
     final_result = {
@@ -31,7 +31,9 @@ def pipeline_run(claim: str):
         "timestamp": datetime.now().isoformat(),
         "questions": questions_output,
         "evidences": evidence_output.get("evidences", []),
-        "label": None,  # futuramente: Supported / Refuted / Unclear
+        "label": classification_output.get("classification"),
+        "rationale": classification_output.get("justification"),
+        "confidence": classification_output.get("confidence")
     }
 
     with open("data/results.json", "w", encoding="utf-8") as f:

@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from main import pipeline_run
+from main import run_pipeline
 import uvicorn
 
 app = FastAPI(
@@ -28,7 +28,7 @@ class ClaimRequest(BaseModel):
 def analyze_claim(request: ClaimRequest):
     try:
         print(f"\n📩 Recebida claim: {request.claim}\n")
-        result = pipeline_run(request.claim)
+        result = run_pipeline(request.claim)
         return result
     except Exception as e:
         print(f"[ERRO] Falha ao processar claim: {e}")
