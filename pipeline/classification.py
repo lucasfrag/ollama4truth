@@ -46,7 +46,10 @@ Evidências coletadas:
 {json.dumps(evidences, indent=2, ensure_ascii=False)}
 
 Com base nessas evidências, classifique a claim em uma das categorias abaixo:
-{VALID_CLASSES}
+- Supported
+- Refuted
+- Not Enough Evidence
+- Conflicting Evidence/Cherry-picking
 
 
 Explique brevemente o motivo da classificação.
