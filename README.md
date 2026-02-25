@@ -1,6 +1,6 @@
 # 🧠 Ollama4Truth — Fact-Checking with RAG + Ollama
 
-An automated fact-checking system that verifies claims against a curated corpus of **19,502 Brazilian fact-checking articles** using Retrieval-Augmented Generation (RAG) and local LLMs via [Ollama](https://ollama.com).
+An automated fact-checking system that verifies claims against a curated corpus of **19,502 Brazilian fact-checking articles** using Retrieval-Augmented Generation (RAG) and local LLMs via [Ollama](https://ollama.com). Developed as part of a **CNPq-funded research project** on combating disinformation in Brazil.
 
 ## ✨ Features
 
@@ -10,7 +10,7 @@ An automated fact-checking system that verifies claims against a curated corpus 
 - **Runtime Model Selector**: Switch between any downloaded Ollama model via webapp dropdown
 - **Claim History**: Every analysis is saved; browse, expand, and clear past results in the history panel
 - **Negation-Aware Classification**: LLM prompt handles negated claims correctly
-- **Semantic Search**: `nomic-ai/nomic-embed-text-v1.5` with chunk & pool encoding (500-char chunks, max-sim)
+- **Semantic Search**: Sentence-transformer embeddings (default: `paraphrase-multilingual-mpnet-base-v2`) with chunk & pool encoding (500-char chunks, max-sim)
 - **Embedding Caching**: First run encodes articles (~10 min), subsequent restarts are instant
 - **19,502 articles** from 6 Brazilian fact-checking sources (G1, Lupa, Aos Fatos, Estadão, Boatos.org, UOL Confere)
 - **Web interface** with real-time SSE streaming
@@ -21,7 +21,7 @@ An automated fact-checking system that verifies claims against a curated corpus 
 ### Prerequisites
 
 - Python 3.10+ (conda env `cnpq` recommended)
-- [Ollama](https://ollama.com) installed with `llama3.1:8b` model
+- [Ollama](https://ollama.com) installed with at least one model (e.g., `qwen3:14b`)
 - JSONL datasets in `coleta_datasets/data/raw/`
 
 ### Setup
@@ -34,8 +34,8 @@ pip install -r requirements.txt
 # 2. Start Ollama (if not running as system service)
 CUDA_VISIBLE_DEVICES=0 OLLAMA_MODELS=/mnt/E-SSD/model_cache ollama serve
 
-# 3. Pull the model (if not already downloaded)
-ollama pull llama3.1:8b
+# 3. Pull a model (if not already downloaded)
+ollama pull qwen3:14b   # or any model of your choice
 
 # 4. Start the API server
 CUDA_VISIBLE_DEVICES=0 uvicorn api:app --host 0.0.0.0 --port 8000
@@ -71,9 +71,9 @@ ollama4truth/
 │   ├── script.js                # SSE client, evidence rendering, history panel
 │   └── style.css                # Styling with source/label badges
 └── data/
-    ├── results.json             # Latest pipeline output
-    ├── history.jsonl            # Claim analysis history (JSONL, one entry per line)
-    └── embeddings_cache/        # Cached .npy embeddings (auto-generated)
+    ├── results.json             # Latest pipeline output (auto-generated, gitignored)
+    ├── history.jsonl            # Claim analysis history (auto-generated, gitignored)
+    └── embeddings_cache/        # Cached .npy embeddings (auto-generated, gitignored)
 ```
 
 ## ⚙️ Configuration (.env)
@@ -81,10 +81,10 @@ ollama4truth/
 | Variable | Default | Description |
 |---|---|---|
 | `CUDA_VISIBLE_DEVICES` | `0` | GPU to use |
-| `OLLAMA_MODEL` | `llama3.1:8b` | Default Ollama model (can be overridden via webapp dropdown) |
+| `OLLAMA_MODEL` | `qwen3:14b` | Default Ollama model (can be overridden via webapp dropdown) |
 | `OLLAMA_MODELS` | `/mnt/E-SSD/model_cache` | Ollama models directory (E-SSD) |
 | `DATA_DIR` | `/mnt/.../data/raw` | Path to JSONL dataset directories |
-| `SEMANTIC_MODEL` | `nomic-ai/nomic-embed-text-v1.5` | Sentence-transformer model for semantic search |
+| `SEMANTIC_MODEL` | `paraphrase-multilingual-mpnet-base-v2` | Sentence-transformer model for semantic search |
 | `ENCODING_STRATEGY` | `chunk_pool` | Encoding strategy: `chunk_pool`, `title_label`, `truncate` |
 | `EMBEDDINGS_CACHE_DIR` | `./data/embeddings_cache` | Directory for cached embeddings (.npy) |
 | `MODEL_CACHE_DIR` | `/mnt/E-SSD/mussi/model_cache` | HuggingFace/Torch model download directory |

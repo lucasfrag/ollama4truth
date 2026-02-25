@@ -33,8 +33,8 @@ Ollama4Truth is an automated fact-checking system developed as part of a **CNPq-
 | Component | Technology |
 |---|---|
 | Backend | Python 3.10+, FastAPI, Uvicorn |
-| LLM | Ollama (local inference), default model: `llama3.1:8b` |
-| Retrieval | rank-bm25 (lexical), sentence-transformers + nomic-embed-text-v1.5 (semantic) |
+| LLM | Ollama (local inference), default model: `qwen3:14b` |
+| Retrieval | rank-bm25 (lexical), sentence-transformers (default: paraphrase-multilingual-mpnet-base-v2) |
 | Frontend | HTML5, CSS3, vanilla JavaScript |
 | Data | JSONL files from 6 fact-checking sources |
 | GPU | NVIDIA RTX A6000 (CUDA) |
@@ -50,7 +50,7 @@ User Claim
      │
      ▼
 ┌─────────────────────┐
-│  Question Generation │  ← Ollama LLM (llama3.1:8b)
+│  Question Generation │  ← Ollama LLM (qwen3:14b)
 │  generate_questions() │
 └─────────┬───────────┘
           │ 3-5 investigative questions
@@ -93,9 +93,9 @@ ollama4truth/
 │   └── style.css                  # Responsive styling
 │
 └── data/
-    ├── results.json               # Latest pipeline output (auto-generated)
-    ├── history.jsonl              # Claim analysis history (auto-generated, JSONL)
-    └── embeddings_cache/          # Cached .npy embeddings (auto-generated)
+    ├── results.json               # Latest pipeline output (auto-generated, gitignored)
+    ├── history.jsonl              # Claim analysis history (auto-generated, gitignored)
+    └── embeddings_cache/          # Cached .npy embeddings (auto-generated, gitignored)
 ```
 
 ### Module Dependencies
@@ -189,7 +189,7 @@ corpus = load_corpus("/path/to/data/raw")
 
 Generates 3-5 neutral, investigative questions from a claim using Ollama.
 
-**Model**: Configured via `OLLAMA_MODEL` in `.env` (default: `llama3.1:8b`). Can be overridden at runtime by selecting a different model in the webapp dropdown.
+**Model**: Configured via `OLLAMA_MODEL` in `.env` (default: `qwen3:14b`). Can be overridden at runtime by selecting a different model in the webapp dropdown.
 
 **Prompt strategy**: The prompt frames the task as an academic fact-checking system and uses an "INPUT TEXT" wrapper to avoid triggering safety filters on sensitive topics. Includes a concrete example to guide output format.
 
@@ -258,13 +258,13 @@ The `RAGIndex` class manages the retrieval indices. **Both BM25 and semantic ind
 | Method | Description | Quality |
 |---|---|---|
 | `bm25` | BM25Okapi keyword matching | Good for exact terms |
-| `semantic` | Cosine similarity via `nomic-ai/nomic-embed-text-v1.5` with chunk_pool encoding | Better for paraphrases |
+| `semantic` | Cosine similarity via sentence-transformer (default: `paraphrase-multilingual-mpnet-base-v2`) with chunk_pool encoding | Better for paraphrases |
 | `hybrid` | Weighted combination of BM25 + semantic scores | Best overall |
 
 **Encoding strategy (chunk_pool):**
 
 - Each article's `full_text` is split into 500-character chunks
-- All chunks are embedded individually with the nomic model (8192 max tokens)
+- All chunks are embedded individually with the sentence-transformer model
 - At retrieval: cosine similarity computed per chunk, **max-sim** taken per article
 - First run encodes ~156k chunks (~10 min on A6000), cached as `.npy` files for instant restarts
 
@@ -288,7 +288,7 @@ The `RAGIndex` class manages the retrieval indices. **Both BM25 and semantic ind
 }
 ```
 
-**Semantic model**: `nomic-ai/nomic-embed-text-v1.5` (configurable via `SEMANTIC_MODEL` env var)
+**Semantic model**: `paraphrase-multilingual-mpnet-base-v2` (configurable via `SEMANTIC_MODEL` env var)
 
 **Model cache**: All HuggingFace models are stored in `MODEL_CACHE_DIR` (default: `/mnt/E-SSD/mussi/model_cache`)
 
@@ -445,7 +445,7 @@ All configuration is in `.env`:
 CUDA_VISIBLE_DEVICES=0
 
 # Ollama model for question generation and classification (default, overridable via webapp)
-OLLAMA_MODEL=llama3.1:8b
+OLLAMA_MODEL=qwen3:14b
 
 # Ollama models directory (E-SSD)
 OLLAMA_MODELS=/mnt/E-SSD/model_cache
@@ -454,7 +454,7 @@ OLLAMA_MODELS=/mnt/E-SSD/model_cache
 DATA_DIR=/mnt/C-SSD/desinformacao/coleta_datasets/data/raw
 
 # Semantic embedding model
-SEMANTIC_MODEL=nomic-ai/nomic-embed-text-v1.5
+SEMANTIC_MODEL=paraphrase-multilingual-mpnet-base-v2
 
 # Encoding strategy: chunk_pool, title_label, or truncate
 ENCODING_STRATEGY=chunk_pool
@@ -476,9 +476,9 @@ MODEL_CACHE_DIR=/mnt/E-SSD/mussi/model_cache
 |---|---|---|
 | `llama3.2:1b` | 1.3 GB | Fast but safety filters too aggressive |
 | `llama3:8b` | 4.7 GB | Good balance |
-| `llama3.1:8b` | 4.9 GB | **Recommended** — best instruction following |
+| `llama3.1:8b` | 4.9 GB | Good instruction following |
 | `deepseek-r1:7b` | 4.7 GB | Reasoning model, slower |
-| `qwen3:14b` | 9.3 GB | Very capable |
+| `qwen3:14b` | 9.3 GB | **Recommended** — very capable, current default |
 | `gemma3:27b` | 17 GB | Excellent but large |
 
 ---
@@ -517,7 +517,7 @@ sudo systemctl start ollama
 #### 3. Pull Model (first time only)
 
 ```bash
-ollama pull llama3.1:8b
+ollama pull qwen3:14b
 ```
 
 #### 4. Start API Server
