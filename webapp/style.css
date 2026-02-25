@@ -1,6 +1,7 @@
 body {
     font-family: 'Segoe UI', Roboto, sans-serif;
-    background: #f4f6f8;
+    background: #0f172a;
+    color: #e2e8f0;
     margin: 0;
     padding: 0;
 }
@@ -17,8 +18,12 @@ header {
 }
 
 header h1 {
-    color: #1e2a38;
+    color: #f1f5f9;
     font-size: 2.2rem;
+}
+
+header p {
+    color: #94a3b8;
 }
 
 header form {
@@ -34,11 +39,16 @@ header input {
     flex: 1;
     max-width: 600px;
     padding: 12px 15px;
-    border: 1px solid #cbd5e1;
+    border: 1px solid #334155;
     border-radius: 8px 0 0 8px;
     outline: none;
     font-size: 1rem;
-    background: #ffffff;
+    background: #1e293b;
+    color: #f1f5f9;
+}
+
+header input::placeholder {
+    color: #64748b;
 }
 
 header button {
@@ -73,16 +83,16 @@ header button:hover {
 
 .option-group label {
     font-size: 0.85rem;
-    color: #475569;
+    color: #94a3b8;
     font-weight: 500;
 }
 
 .option-group select {
     padding: 6px 12px;
-    border: 1px solid #cbd5e1;
+    border: 1px solid #334155;
     border-radius: 6px;
-    background: #ffffff;
-    color: #1e2a38;
+    background: #1e293b;
+    color: #e2e8f0;
     font-size: 0.85rem;
     cursor: pointer;
     outline: none;
@@ -115,17 +125,17 @@ header button:hover {
 /* Sidebar */
 aside {
     width: 250px;
-    background: #ffffff;
+    background: #1e293b;
     border-radius: 12px;
     padding: 15px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.07);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
     max-height: 600px;
     overflow-y: auto;
 }
 
 aside h2 {
     margin-top: 0;
-    color: #1e2a38;
+    color: #f1f5f9;
 }
 
 aside li {
@@ -133,11 +143,12 @@ aside li {
     margin-bottom: 8px;
     border-radius: 8px;
     cursor: pointer;
+    color: #cbd5e1;
     transition: background 0.2s, transform 0.2s;
 }
 
 aside li:hover {
-    background: #e0e7ff;
+    background: #334155;
     transform: translateX(3px);
 }
 
@@ -150,10 +161,10 @@ aside li.active {
 /* Main content */
 main {
     flex: 1;
-    background: #ffffff;
+    background: #1e293b;
     border-radius: 12px;
     padding: 20px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.07);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
     max-height: 600px;
     overflow-y: auto;
 }
@@ -161,7 +172,7 @@ main {
 .claim-title {
     font-size: 1.4rem;
     margin-bottom: 10px;
-    color: #1e2a38;
+    color: #f1f5f9;
 }
 
 .label-badge {
@@ -217,29 +228,31 @@ main {
     border-radius: 8px;
     font-size: 0.7rem;
     font-weight: 600;
-    color: #1e2a38;
-    background: #e2e8f0;
+    color: #e2e8f0;
+    background: #334155;
     margin-right: 4px;
     vertical-align: middle;
     text-transform: uppercase;
 }
 
 .evidence-card {
-    background: #ffffff;
+    background: #0f172a;
+    border: 1px solid #334155;
     border-radius: 10px;
     padding: 15px;
     margin-bottom: 15px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
     animation: slide-in 0.3s ease-out;
 }
 
 .evidence-card:hover {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    border-color: #475569;
 }
 
 .evidence-card h3 {
     margin-top: 0;
-    color: #1e2a38;
+    color: #f1f5f9;
     font-size: 1.1rem;
 }
 
@@ -249,22 +262,24 @@ main {
 
 .evidence-card li {
     margin-bottom: 8px;
+    color: #cbd5e1;
 }
 
 .evidence-card a {
     text-decoration: none;
-    color: #3b82f6;
+    color: #60a5fa;
     font-weight: bold;
 }
 
 .evidence-card a:hover {
     text-decoration: underline;
+    color: #93bbfc;
 }
 
 .summary {
     margin-top: 15px;
     font-size: 0.9rem;
-    color: #555;
+    color: #94a3b8;
 }
 
 .hidden {
@@ -301,30 +316,31 @@ main {
 .claim-timestamp {
     font-style: italic;
     font-size: 0.85rem;
-    color: #666;
+    color: #64748b;
     margin-bottom: 10px;
 }
 
 .rationale {
     margin-top: 15px;
-    background: #f0f9ff;
+    background: #162544;
     padding: 10px;
     border-radius: 8px;
-    color: #1e3a8a;
+    color: #93c5fd;
+    border: 1px solid #1e3a5f;
 }
 
 .confidence {
     margin-top: 5px;
     font-weight: bold;
-    color: #0f5132;
-    background-color: #d1e7dd;
+    color: #86efac;
+    background-color: #14532d;
     display: inline-block;
     padding: 5px 10px;
     border-radius: 12px;
 }
 
 .log-box {
-    color: #333;
+    color: #cbd5e1;
     font-family: monospace;
     padding: 10px;
     overflow-y: auto;
@@ -333,7 +349,7 @@ main {
 #summary h3 {
     margin-top: 0;
     font-size: 1rem;
-    color: #1e2a38;
+    color: #f1f5f9;
     margin-bottom: 10px;
 }
 
@@ -350,15 +366,15 @@ main {
     gap: 10px;
     margin-top: 25px;
     padding-top: 15px;
-    border-top: 1px solid #e2e8f0;
+    border-top: 1px solid #334155;
 }
 
 .history-controls button {
     padding: 8px 18px;
-    border: 1px solid #cbd5e1;
+    border: 1px solid #334155;
     border-radius: 8px;
-    background: #ffffff;
-    color: #1e2a38;
+    background: #1e293b;
+    color: #e2e8f0;
     font-size: 0.9rem;
     font-weight: 500;
     cursor: pointer;
@@ -366,17 +382,17 @@ main {
 }
 
 .history-controls button:hover {
-    background: #f1f5f9;
-    border-color: #94a3b8;
+    background: #334155;
+    border-color: #475569;
 }
 
 .btn-danger {
-    color: #dc2626 !important;
-    border-color: #fca5a5 !important;
+    color: #f87171 !important;
+    border-color: #7f1d1d !important;
 }
 
 .btn-danger:hover {
-    background: #fef2f2 !important;
+    background: #450a0a !important;
 }
 
 .history-count {
@@ -390,14 +406,14 @@ main {
 
 .history-empty {
     text-align: center;
-    color: #94a3b8;
+    color: #475569;
     font-style: italic;
     padding: 20px;
 }
 
 .history-card {
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
+    background: #1e293b;
+    border: 1px solid #334155;
     border-radius: 10px;
     margin-bottom: 10px;
     overflow: hidden;
@@ -405,13 +421,13 @@ main {
 }
 
 .history-card:hover {
-    border-color: #94a3b8;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    border-color: #475569;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .history-card.expanded {
     border-color: #3b82f6;
-    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.12);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
 }
 
 .history-header {
@@ -434,26 +450,26 @@ main {
 
 .history-timestamp {
     font-size: 0.75rem;
-    color: #94a3b8;
+    color: #475569;
     margin-left: auto;
 }
 
 .history-claim {
     font-size: 1rem;
     font-weight: 600;
-    color: #1e2a38;
+    color: #f1f5f9;
     margin-top: 6px;
 }
 
 .history-settings {
     font-size: 0.75rem;
-    color: #94a3b8;
+    color: #475569;
     margin-top: 3px;
 }
 
 .history-body {
     padding: 0 16px 16px;
-    border-top: 1px solid #f1f5f9;
+    border-top: 1px solid #334155;
 }
 
 .history-section {
@@ -462,7 +478,7 @@ main {
 
 .history-section h4 {
     font-size: 0.9rem;
-    color: #475569;
+    color: #94a3b8;
     margin: 0 0 6px 0;
 }
 
@@ -475,18 +491,18 @@ main {
 .history-section li {
     margin-bottom: 5px;
     font-size: 0.85rem;
-    color: #334155;
+    color: #cbd5e1;
 }
 
 .history-evidence-question {
     font-weight: 600;
     font-size: 0.85rem;
-    color: #1e2a38;
+    color: #f1f5f9;
     margin-top: 8px;
     margin-bottom: 4px;
 }
 
 .history-score {
     font-size: 0.7rem;
-    color: #94a3b8;
+    color: #475569;
 }

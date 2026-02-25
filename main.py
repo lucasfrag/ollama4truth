@@ -108,8 +108,8 @@ def run_pipeline(claim: str, mode: str = "rag", strategy: str = "ollama_verdict"
     3. Classificação (ollama_verdict/label_vote)
     """
     model = ollama_model or os.getenv("OLLAMA_MODEL", "llama3.1:8b")
-    print(f"\n🚀 Iniciando pipeline para a claim:\n   \"{claim}\"")
-    print(f"   Mode: {mode} | Strategy: {strategy} | Retrieval: {retrieval_method or 'default'} | Model: {model}\n")
+    print(f"\n🚀 Iniciando pipeline para a alegação:\n   \"{claim}\"")
+    print(f"   Modo: {mode} | Estratégia: {strategy} | Recuperação: {retrieval_method or 'default'} | Modelo: {model}\n")
 
     # === 1️⃣ Gerar perguntas ===
     questions_output = generate_questions(claim, model=model)
@@ -159,22 +159,22 @@ def run_pipeline_stream(claim: str, mode: str = "rag", strategy: str = "ollama_v
     Ideal para streaming em tempo real (SSE).
     """
     model = ollama_model or os.getenv("OLLAMA_MODEL", "llama3.1:8b")
-    yield f"🚀 Iniciando pipeline para: \"{claim}\" [mode={mode}, strategy={strategy}, retrieval={retrieval_method or 'default'}, model={model}]", None
+    yield f"🚀 Iniciando pipeline para: \"{claim}\" [modo={mode}, estratégia={strategy}, recuperação={retrieval_method or 'default'}, modelo={model}]", None
 
     # === 1️⃣ Gerar perguntas ===
-    yield f"🧩 Gerando perguntas (model={model})...", None
+    yield f"🧩 Gerando perguntas (modelo={model})...", None
     questions_output = generate_questions(claim, model=model)
     questions = [q for q in questions_output.get("questions", []) if isinstance(q, str)]
     yield f"✅ {len(questions)} perguntas geradas.", None
 
     # === 2️⃣ Buscar evidências ===
-    yield f"🔍 Buscando evidências (mode={mode}, retrieval={retrieval_method or 'default'})...", None
+    yield f"🔍 Buscando evidências (modo={mode}, recuperação={retrieval_method or 'default'})...", None
     evidence_output = retrieve_evidence(claim, questions, mode=mode, retrieval_method=retrieval_method)
     total_ev = sum(len(e.get("results", [])) for e in evidence_output.get("evidences", []))
     yield f"✅ {total_ev} evidências encontradas.", None
 
     # === 3️⃣ Classificação ===
-    yield f"🧠 Classificando claim (strategy={strategy}, model={model})...", None
+    yield f"🧠 Classificando alegação (estratégia={strategy}, modelo={model})...", None
     classification_output = classify_claim(
         claim,
         evidence_output.get("evidences", []),

@@ -46,36 +46,36 @@ def classify_ollama_verdict(claim: str, evidences: list, model: str = None) -> d
     """
     Classifica a claim usando Ollama LLM com base nas evidências coletadas.
     """
-    VALID_CLASSES = ["Supported", "Refuted", "Not Enough Evidence", "Conflicting Evidence/Cherry-picking"]
+    VALID_CLASSES = ["Apoiada", "Refutada", "Insuficiente", "Contraditória"]
 
-    prompt = f"""Você é um sistema de checagem de fatos acadêmico. Sua tarefa é avaliar se uma CLAIM (afirmação) é verdadeira ou falsa, com base nas evidências fornecidas.
+    prompt = f"""Você é um sistema de checagem de fatos acadêmico. Sua tarefa é avaliar se uma ALEGAÇÃO é verdadeira ou falsa, com base nas evidências fornecidas.
 
 IMPORTANTE — LEIA COM ATENÇÃO:
-- Você deve avaliar se a CLAIM EXATA fornecida é apoiada ou refutada pelas evidências.
-- Preste muita atenção a NEGAÇÕES na claim. Exemplos:
-  * "Vacinas NÃO causam autismo" → se as evidências dizem que é FALSO que vacinas causam autismo, então esta claim é SUPPORTED (apoiada), pois a claim nega algo que é de fato falso.
-  * "Vacinas causam autismo" → se as evidências dizem que é FALSO, então esta claim é REFUTED.
-- Os artigos de fact-checking frequentemente têm rótulos como "falso", "enganoso" etc. Esses rótulos se referem ao TÓPICO ORIGINAL da desinformação, NÃO necessariamente à claim que você está avaliando.
-- Analise o SENTIDO SEMÂNTICO da claim e compare com o que as evidências dizem.
+- Você deve avaliar se a ALEGAÇÃO EXATA fornecida é apoiada ou refutada pelas evidências.
+- Preste muita atenção a NEGAÇÕES na alegação. Exemplos:
+  * "Vacinas NÃO causam autismo" → se as evidências dizem que é FALSO que vacinas causam autismo, então esta alegação é APOIADA, pois a alegação nega algo que é de fato falso.
+  * "Vacinas causam autismo" → se as evidências dizem que é FALSO, então esta alegação é REFUTADA.
+- Os artigos de fact-checking frequentemente têm rótulos como "falso", "enganoso" etc. Esses rótulos se referem ao TÓPICO ORIGINAL da desinformação, NÃO necessariamente à alegação que você está avaliando.
+- Analise o SENTIDO SEMÂNTICO da alegação e compare com o que as evidências dizem.
 
-Claim: "{claim}"
+Alegação: "{claim}"
 
 Evidências coletadas:
 {json.dumps(evidences, indent=2, ensure_ascii=False)}
 
-Classifique a claim em uma das categorias:
-- Supported: a claim É VERDADEIRA segundo as evidências
-- Refuted: a claim É FALSA segundo as evidências
-- Not Enough Evidence: evidências insuficientes
-- Conflicting Evidence/Cherry-picking: evidências contraditórias
+Classifique a alegação em uma das categorias:
+- Apoiada: a alegação É VERDADEIRA segundo as evidências
+- Refutada: a alegação É FALSA segundo as evidências
+- Insuficiente: evidências insuficientes
+- Contraditória: evidências contraditórias
 
 Indique um nível de confiança (0 a 100%).
 
 Saída obrigatória: JSON no formato abaixo, sem texto adicional:
 
 {{
-  "classification": "<Supported | Refuted | Not Enough Evidence | Conflicting Evidence/Cherry-picking>",
-  "justification": "Texto explicativo curto",
+  "classification": "<Apoiada | Refutada | Insuficiente | Contraditória>",
+  "justification": "Texto explicativo.",
   "confidence": <0-100>
 }}
 """
@@ -107,7 +107,7 @@ Saída obrigatória: JSON no formato abaixo, sem texto adicional:
         "timestamp": datetime.utcnow().isoformat()
     }
 
-    print(f"✅ [OLLAMA] Claim classificada como: {classification.upper()}")
+    print(f"✅ [OLLAMA] Alegação classificada como: {classification.upper()}")
     return result
 
 
@@ -145,19 +145,19 @@ def classify_label_vote(claim: str, evidences: list) -> dict:
 
     # Determine verdict
     if total == 0:
-        classification = "Not Enough Evidence"
+        classification = "Insuficiente"
         confidence = 0
         justification = "Nenhum artigo com classificação encontrado nas evidências."
     elif false_count > true_count and false_count > other_count:
-        classification = "Refuted"
+        classification = "Refutada"
         confidence = round((false_count / total) * 100, 1)
         justification = f"{false_count} de {total} artigos classificam como falso/enganoso."
     elif true_count > false_count and true_count > other_count:
-        classification = "Supported"
+        classification = "Apoiada"
         confidence = round((true_count / total) * 100, 1)
         justification = f"{true_count} de {total} artigos classificam como verdadeiro."
     else:
-        classification = "Not Enough Evidence"
+        classification = "Insuficiente"
         confidence = round(max(false_count, true_count, other_count) / total * 100, 1) if total > 0 else 0
         justification = f"Sem consenso claro: {false_count} falso, {true_count} verdadeiro, {other_count} outro."
 
@@ -171,7 +171,7 @@ def classify_label_vote(claim: str, evidences: list) -> dict:
         "timestamp": datetime.utcnow().isoformat()
     }
 
-    print(f"✅ [LABEL_VOTE] Claim classificada como: {classification.upper()} ({confidence}%)")
+    print(f"✅ [LABEL_VOTE] Alegação classificada como: {classification.upper()} ({confidence}%)")
     return result
 
 

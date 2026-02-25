@@ -115,7 +115,7 @@ function renderClaim(data) {
     const modeLabel = { rag: "RAG (Corpus Local)", web: "Web (Google)", hybrid: "Híbrido" }[data.mode] || data.mode;
     const retrievalLabel = { bm25: "BM25", semantic: "Semântico", hybrid: "Híbrido" }[data.retrieval_method] || data.retrieval_method;
     const stratLabel = { ollama_verdict: "Ollama LLM", label_vote: "Votação por Labels" }[data.strategy] || data.strategy;
-    infoEl.textContent = `Modo: ${modeLabel} | Retrieval: ${retrievalLabel} | Estratégia: ${stratLabel}`;
+    infoEl.textContent = `Modo: ${modeLabel} | Recuperação: ${retrievalLabel} | Estratégia: ${stratLabel}`;
     result.appendChild(infoEl);
 
     // Label
@@ -123,8 +123,8 @@ function renderClaim(data) {
     labelEl.classList.add("label-badge");
     if (data.label) {
         labelEl.classList.add(
-            data.label.toUpperCase() === "SUPPORTED" ? "label-supported" :
-                data.label.toUpperCase() === "REFUTED" ? "label-refuted" :
+            data.label.toUpperCase() === "APOIADA" ? "label-supported" :
+                data.label.toUpperCase() === "REFUTADA" ? "label-refuted" :
                     "label-uncertain"
         );
         labelEl.textContent = data.label.toUpperCase();
@@ -306,14 +306,14 @@ function renderHistoryEntry(entry, num) {
     card.classList.add("history-card");
 
     const labelClass = entry.label
-        ? entry.label.toUpperCase() === "SUPPORTED" ? "label-supported"
-            : entry.label.toUpperCase() === "REFUTED" ? "label-refuted"
+        ? entry.label.toUpperCase() === "APOIADA" ? "label-supported"
+            : entry.label.toUpperCase() === "REFUTADA" ? "label-refuted"
                 : "label-uncertain"
         : "label-uncertain";
 
     const modeLabel = { rag: "RAG", web: "Web", hybrid: "Híbrido" }[entry.mode] || entry.mode;
     const retrievalLabel = { bm25: "BM25", semantic: "Semântico", hybrid: "Híbrido" }[entry.retrieval_method] || entry.retrieval_method || "bm25";
-    const stratLabel = { ollama_verdict: "Ollama LLM", label_vote: "Label Vote" }[entry.strategy] || entry.strategy;
+    const stratLabel = { ollama_verdict: "Ollama LLM", label_vote: "Votação por Rótulos" }[entry.strategy] || entry.strategy;
 
     // Header
     const header = document.createElement("div");

@@ -80,7 +80,7 @@ def _retrieve_web(claim: str, questions: list) -> dict:
         })
         time.sleep(1.5)
 
-    print(f"[WEB] Evidências coletadas para claim: {claim}")
+    print(f"[WEB] Evidências coletadas para alegação: {claim}")
     return all_evidence
 
 
