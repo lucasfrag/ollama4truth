@@ -1,3 +1,7 @@
 .env
 __pycache__/
 output/
+data/embeddings_cache/
+__pycache__/
+data/history.jsonl
+data/results.json
