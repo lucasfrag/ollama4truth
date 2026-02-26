@@ -134,12 +134,17 @@ function renderClaim(data) {
     }
     result.appendChild(labelEl);
 
-    // Confiança
+    // Confiança (consistency-based)
     if (data.confidence !== null && data.confidence !== undefined) {
         const confEl = document.createElement("div");
         confEl.classList.add("confidence");
         confEl.style.marginLeft = "5px";
-        confEl.textContent = `Confiança: ${data.confidence}%`;
+        if (data.consistency_detail) {
+            const agree = data.consistency_detail.filter(v => v === data.label).length;
+            confEl.textContent = `Consistência: ${data.confidence}% (${agree}/${data.consistency_detail.length})`;
+        } else {
+            confEl.textContent = `Confiança: ${data.confidence}%`;
+        }
         result.appendChild(confEl);
     }
 
@@ -322,7 +327,7 @@ function renderHistoryEntry(entry, num) {
         <div class="history-header-top">
             <span class="history-index">#${num}</span>
             <span class="label-badge ${labelClass}">${(entry.label || "N/A").toUpperCase()}</span>
-            ${entry.confidence != null ? `<span class="confidence">${entry.confidence}%</span>` : ""}
+            ${entry.confidence != null ? `<span class="confidence">${entry.consistency_detail ? `${entry.confidence}% (${entry.consistency_detail.filter(v => v === entry.label).length}/${entry.consistency_detail.length})` : `${entry.confidence}%`}</span>` : ""}
             <span class="history-timestamp">${new Date(entry.timestamp).toLocaleString()}</span>
         </div>
         <div class="history-claim">${entry.claim}</div>
