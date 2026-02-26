@@ -9,6 +9,7 @@ Uses chunk_pool encoding for semantic (splits articles into 500-char chunks).
 Supports embedding caching for instant restarts.
 """
 
+import hashlib
 import os
 import re
 import unicodedata
@@ -70,9 +71,19 @@ class RAGIndex:
         self.semantic_model = None
         self.article_embeddings = None
         self.article_chunk_ranges = None  # (start, end) per article for chunk_pool
+        self._corpus_hash = self._compute_corpus_hash()
 
         self._build_bm25_index()
         self._build_semantic_index()
+
+    def _compute_corpus_hash(self) -> str:
+        """
+        Compute a stable hash from article URLs to detect corpus changes.
+        Uses SHA-256 of all sorted URLs, truncated to 8 hex chars.
+        """
+        urls = sorted(article.get("url", "") for article in self.corpus)
+        digest = hashlib.sha256("\n".join(urls).encode("utf-8")).hexdigest()[:8]
+        return f"{len(self.corpus)}_{digest}"
 
     def _build_bm25_index(self):
         """Build BM25 index from article full_text."""
@@ -109,8 +120,8 @@ class RAGIndex:
         # Resolve cache paths
         cache_path = Path(cache_dir)
         safe_model_name = model_name.replace("/", "_")
-        embeddings_file = cache_path / f"embeddings_{safe_model_name}_{len(self.corpus)}_{encoding_strategy}.npy"
-        chunk_ranges_file = cache_path / f"chunk_ranges_{safe_model_name}_{len(self.corpus)}_{encoding_strategy}.npy"
+        embeddings_file = cache_path / f"embeddings_{safe_model_name}_{self._corpus_hash}_{encoding_strategy}.npy"
+        chunk_ranges_file = cache_path / f"chunk_ranges_{safe_model_name}_{self._corpus_hash}_{encoding_strategy}.npy"
 
         # Try loading from cache
         if embeddings_file.exists():
@@ -311,6 +322,7 @@ class RAGIndex:
             "title": article["titulo"],
             "link": article["url"],
             "snippet": article["texto"][:300],
+            "full_text": article["texto"],
             "score": round(score, 4),
             "source": article["source"],
             "label": article["classificacao"],

@@ -42,11 +42,50 @@ def run_ollama(prompt: str, model: str = None) -> str:
 # ============================================================
 # Strategy 1: Ollama LLM Verdict (original behavior)
 # ============================================================
+# Max characters per article in the LLM prompt (safety net for context window)
+MAX_EVIDENCE_CHARS = int(os.getenv("MAX_EVIDENCE_CHARS", "20000"))
+
+
+def _build_evidence_text(evidences: list) -> str:
+    """
+    Build a structured text block from evidence results for the LLM prompt.
+    Uses full_text when available, falls back to snippet.
+    Truncates individual articles to MAX_EVIDENCE_CHARS.
+    """
+    parts = []
+    article_num = 0
+
+    for ev_group in evidences:
+        for r in ev_group.get("results", []):
+            article_num += 1
+            title = r.get("title", "Sem título")
+            text = r.get("full_text") or r.get("snippet", "")
+
+            # Truncate if needed
+            if len(text) > MAX_EVIDENCE_CHARS:
+                text = text[:MAX_EVIDENCE_CHARS] + "... [truncado]"
+
+            label_info = f" [Rótulo do fact-checker: {r['label']}]" if r.get("label") else ""
+
+            parts.append(
+                f"--- Artigo {article_num}{label_info} ---\n"
+                f"Título: {title}\n"
+                f"Texto:\n{text}"
+            )
+
+    if not parts:
+        return "(Nenhuma evidência encontrada)"
+
+    return "\n\n".join(parts)
+
+
 def classify_ollama_verdict(claim: str, evidences: list, model: str = None) -> dict:
     """
     Classifica a claim usando Ollama LLM com base nas evidências coletadas.
     """
     VALID_CLASSES = ["Apoiada", "Refutada", "Insuficiente", "Contraditória"]
+
+    evidence_text = _build_evidence_text(evidences)
 
     prompt = f"""Você é um sistema de checagem de fatos acadêmico. Sua tarefa é avaliar se uma ALEGAÇÃO é verdadeira ou falsa, com base nas evidências fornecidas.
 
@@ -61,7 +100,7 @@ IMPORTANTE — LEIA COM ATENÇÃO:
 Alegação: "{claim}"
 
 Evidências coletadas:
-{json.dumps(evidences, indent=2, ensure_ascii=False)}
+{evidence_text}
 
 Classifique a alegação em uma das categorias:
 - Apoiada: a alegação É VERDADEIRA segundo as evidências
