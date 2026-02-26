@@ -94,7 +94,7 @@ def _build_classification_prompt(claim: str, evidences: list) -> str:
 
         # Build evidence context for this question (title + truncated text)
         evidence_parts = []
-        for j, r in enumerate(results[:5], 1):  # Limit to top 5 per question
+        for j, r in enumerate(results[:3], 1):  # Top 3 per question for prompt size
             title = r.get("title", "Sem título")
             text = r.get("full_text") or r.get("snippet", "")
             if len(text) > 5000:
