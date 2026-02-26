@@ -81,22 +81,52 @@ def _build_evidence_text(evidences: list) -> str:
     return "\n\n".join(parts)
 
 
-def _build_classification_prompt(claim: str, evidence_text: str) -> str:
-    """Build the classification prompt for a single LLM run."""
-    return f"""Você é um sistema de checagem de fatos acadêmico. Sua tarefa é avaliar se uma ALEGAÇÃO é verdadeira ou falsa, com base nas evidências fornecidas.
+def _build_classification_prompt(claim: str, evidences: list) -> str:
+    """
+    Build the classification prompt including per-question answers and evidence.
+    Expects evidences enriched with 'answer' field from answer_questions step.
+    """
+    qa_parts = []
+    for i, ev_group in enumerate(evidences, 1):
+        question = ev_group.get("question", f"Pergunta {i}")
+        answer = ev_group.get("answer", "Sem resposta disponível.")
+        results = ev_group.get("results", [])
+
+        # Build evidence context for this question (title + truncated text)
+        evidence_parts = []
+        for j, r in enumerate(results[:5], 1):  # Limit to top 5 per question
+            title = r.get("title", "Sem título")
+            text = r.get("full_text") or r.get("snippet", "")
+            if len(text) > 5000:
+                text = text[:5000] + "... [truncado]"
+            evidence_parts.append(
+                f"  Artigo {j}: {title}\n"
+                f"  Texto: {text}"
+            )
+
+        evidence_list = "\n\n".join(evidence_parts) if evidence_parts else "  (Nenhuma evidência encontrada)"
+
+        qa_parts.append(
+            f"--- Pergunta {i} ---\n"
+            f"Pergunta: {question}\n"
+            f"Resposta baseada nas evidências: {answer}\n"
+            f"Artigos consultados:\n{evidence_list}"
+        )
+
+    qa_text = "\n\n".join(qa_parts) if qa_parts else "(Nenhuma pergunta ou evidência disponível)"
+
+    return f"""Você é um sistema de checagem de fatos acadêmico. Sua tarefa é avaliar se uma ALEGAÇÃO é verdadeira ou falsa, com base nas respostas às perguntas investigativas e nas evidências coletadas.
 
 IMPORTANTE — LEIA COM ATENÇÃO:
-- Você deve avaliar se a ALEGAÇÃO EXATA fornecida é apoiada ou refutada pelas evidências.
-- Preste muita atenção a NEGAÇÕES na alegação. Exemplos:
-  * "Vacinas NÃO causam autismo" → se as evidências dizem que é FALSO que vacinas causam autismo, então esta alegação é APOIADA, pois a alegação nega algo que é de fato falso.
-  * "Vacinas causam autismo" → se as evidências dizem que é FALSO, então esta alegação é REFUTADA.
-- Os artigos de fact-checking frequentemente têm rótulos como "falso", "enganoso" etc. Esses rótulos se referem ao TÓPICO ORIGINAL da desinformação, NÃO necessariamente à alegação que você está avaliando.
-- Analise o SENTIDO SEMÂNTICO da alegação e compare com o que as evidências dizem.
+- Você deve avaliar se a ALEGAÇÃO EXATA fornecida é apoiada ou refutada.
+- Preste muita atenção a NEGAÇÕES na alegação.
+- Analise as RESPOSTAS às perguntas investigativas — elas resumem o que as evidências dizem.
+- Analise o SENTIDO SEMÂNTICO da alegação e compare com as respostas.
 
 Alegação: "{claim}"
 
-Evidências coletadas:
-{evidence_text}
+Perguntas investigativas e respostas:
+{qa_text}
 
 Classifique a alegação em uma das categorias:
 - Apoiada: a alegação É VERDADEIRA segundo as evidências
@@ -177,8 +207,7 @@ def classify_ollama_verdict(claim: str, evidences: list, model: str = None, n_ru
     Confidence is computed as the percentage of runs that agree on the majority classification.
     """
     n_runs = n_runs or CONSISTENCY_RUNS
-    evidence_text = _build_evidence_text(evidences)
-    prompt = _build_classification_prompt(claim, evidence_text)
+    prompt = _build_classification_prompt(claim, evidences)
 
     runs = []
     for i in range(n_runs):
