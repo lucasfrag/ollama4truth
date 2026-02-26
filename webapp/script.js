@@ -358,17 +358,24 @@ function renderHistoryEntry(entry, num) {
     const evidences = entry.evidences || [];
     let totalArticles = 0;
     evidences.forEach(ev => { totalArticles += (ev.results || []).length; });
-    if (totalArticles > 0) {
+    if (evidences.length > 0) {
         const sec = document.createElement("div");
         sec.classList.add("history-section");
         sec.innerHTML = `<h4>📰 Evidências (${totalArticles} artigos)</h4>`;
 
         evidences.forEach(ev => {
-            if (!ev.results || ev.results.length === 0) return;
             const qDiv = document.createElement("div");
             qDiv.classList.add("history-evidence-question");
             qDiv.textContent = ev.question;
             sec.appendChild(qDiv);
+
+            if (!ev.results || ev.results.length === 0) {
+                const noEv = document.createElement("p");
+                noEv.style.cssText = "font-size:0.8rem;color:#64748b;font-style:italic;margin:2px 0 8px 20px;";
+                noEv.textContent = "Nenhuma evidência encontrada.";
+                sec.appendChild(noEv);
+                return;
+            }
 
             const ul = document.createElement("ul");
             ev.results.forEach(r => {
