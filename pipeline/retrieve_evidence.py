@@ -151,22 +151,13 @@ def _retrieve_rag(claim: str, questions: list, retrieval_method: str = None) -> 
         "mode": "rag",
     }
 
-    seen_urls = set()  # Deduplicate across questions
-
     for q in questions:
         print(f"[RAG] Buscando: {q} [method={retrieval_method or 'default'}]")
         results = _rag_index.retrieve(q, k=5, method=retrieval_method)
 
-        # Deduplicate: skip articles already returned for earlier questions
-        unique_results = []
-        for r in results:
-            if r["link"] not in seen_urls:
-                seen_urls.add(r["link"])
-                unique_results.append(r)
-
         all_evidence["evidences"].append({
             "question": q,
-            "results": unique_results,
+            "results": results,
         })
 
     total = sum(len(e["results"]) for e in all_evidence["evidences"])
