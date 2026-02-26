@@ -29,7 +29,14 @@ if os.getenv("OLLAMA_MODELS"):
 
 from pipeline.generate_questions import generate_questions
 from pipeline.retrieve_evidence import retrieve_evidence, set_rag_index
-from pipeline.classification import classify_claim
+from pipeline.classification import (
+    classify_claim,
+    _build_evidence_text,
+    _build_classification_prompt,
+    _run_single_classification,
+    _aggregate_consistency,
+    CONSISTENCY_RUNS,
+)
 
 HISTORY_FILE = os.path.join(os.path.dirname(__file__), "data", "history.jsonl")
 
@@ -137,6 +144,7 @@ def run_pipeline(claim: str, mode: str = "rag", strategy: str = "ollama_verdict"
         "label": classification_output.get("classification"),
         "rationale": classification_output.get("justification"),
         "confidence": classification_output.get("confidence"),
+        "consistency_detail": classification_output.get("consistency_detail"),
         "mode": mode,
         "strategy": strategy,
         "retrieval_method": retrieval_method or "bm25",
@@ -174,14 +182,33 @@ def run_pipeline_stream(claim: str, mode: str = "rag", strategy: str = "ollama_v
     yield f"✅ {total_ev} evidências encontradas.", None
 
     # === 3️⃣ Classificação ===
-    yield f"🧠 Classificando alegação (estratégia={strategy}, modelo={model})...", None
-    classification_output = classify_claim(
-        claim,
-        evidence_output.get("evidences", []),
-        strategy=strategy,
-        model=model,
-    )
-    yield f"✅ Classificação concluída: {classification_output.get('classification')}", None
+    if strategy == "ollama_verdict":
+        n_runs = CONSISTENCY_RUNS
+        yield f"🧠 Classificando alegação ({n_runs} rodadas de consistência)...", None
+
+        evidence_text = _build_evidence_text(evidence_output.get("evidences", []))
+        prompt = _build_classification_prompt(claim, evidence_text)
+
+        runs = []
+        for i in range(n_runs):
+            yield f"🧠 Classificando alegação (rodada {i + 1}/{n_runs})...", None
+            run_result = _run_single_classification(prompt, model=model)
+            runs.append(run_result)
+            yield f"   ✔ Rodada {i + 1}: {run_result['classification']}", None
+
+        classification_output = _aggregate_consistency(runs, claim)
+        majority_count = sum(1 for r in runs if r["classification"] == classification_output["classification"])
+        yield (f"✅ Classificação: {classification_output['classification']} "
+               f"(consistência: {classification_output['confidence']}% — {majority_count}/{n_runs} concordam)"), None
+    else:
+        yield f"🧠 Classificando alegação (estratégia={strategy})...", None
+        classification_output = classify_claim(
+            claim,
+            evidence_output.get("evidences", []),
+            strategy=strategy,
+            model=model,
+        )
+        yield f"✅ Classificação concluída: {classification_output.get('classification')}", None
 
     # === Resultado final ===
     final_result = {
@@ -193,6 +220,7 @@ def run_pipeline_stream(claim: str, mode: str = "rag", strategy: str = "ollama_v
         "label": classification_output.get("classification"),
         "rationale": classification_output.get("justification"),
         "confidence": classification_output.get("confidence"),
+        "consistency_detail": classification_output.get("consistency_detail"),
         "mode": mode,
         "strategy": strategy,
         "retrieval_method": retrieval_method or "bm25",

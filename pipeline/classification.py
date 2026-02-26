@@ -40,10 +40,15 @@ def run_ollama(prompt: str, model: str = None) -> str:
 
 
 # ============================================================
-# Strategy 1: Ollama LLM Verdict (original behavior)
+# Strategy 1: Ollama LLM Verdict with Multi-Run Consistency
 # ============================================================
 # Max characters per article in the LLM prompt (safety net for context window)
 MAX_EVIDENCE_CHARS = int(os.getenv("MAX_EVIDENCE_CHARS", "20000"))
+
+# Number of consistency runs for confidence calculation
+CONSISTENCY_RUNS = int(os.getenv("CONSISTENCY_RUNS", "3"))
+
+VALID_CLASSES = ["Apoiada", "Refutada", "Insuficiente", "Contraditória"]
 
 
 def _build_evidence_text(evidences: list) -> str:
@@ -61,7 +66,6 @@ def _build_evidence_text(evidences: list) -> str:
             title = r.get("title", "Sem título")
             text = r.get("full_text") or r.get("snippet", "")
 
-            # Truncate if needed
             if len(text) > MAX_EVIDENCE_CHARS:
                 text = text[:MAX_EVIDENCE_CHARS] + "... [truncado]"
 
@@ -79,15 +83,9 @@ def _build_evidence_text(evidences: list) -> str:
     return "\n\n".join(parts)
 
 
-def classify_ollama_verdict(claim: str, evidences: list, model: str = None) -> dict:
-    """
-    Classifica a claim usando Ollama LLM com base nas evidências coletadas.
-    """
-    VALID_CLASSES = ["Apoiada", "Refutada", "Insuficiente", "Contraditória"]
-
-    evidence_text = _build_evidence_text(evidences)
-
-    prompt = f"""Você é um sistema de checagem de fatos acadêmico. Sua tarefa é avaliar se uma ALEGAÇÃO é verdadeira ou falsa, com base nas evidências fornecidas.
+def _build_classification_prompt(claim: str, evidence_text: str) -> str:
+    """Build the classification prompt for a single LLM run."""
+    return f"""Você é um sistema de checagem de fatos acadêmico. Sua tarefa é avaliar se uma ALEGAÇÃO é verdadeira ou falsa, com base nas evidências fornecidas.
 
 IMPORTANTE — LEIA COM ATENÇÃO:
 - Você deve avaliar se a ALEGAÇÃO EXATA fornecida é apoiada ou refutada pelas evidências.
@@ -108,17 +106,20 @@ Classifique a alegação em uma das categorias:
 - Insuficiente: evidências insuficientes
 - Contraditória: evidências contraditórias
 
-Indique um nível de confiança (0 a 100%).
-
 Saída obrigatória: JSON no formato abaixo, sem texto adicional:
 
 {{
   "classification": "<Apoiada | Refutada | Insuficiente | Contraditória>",
-  "justification": "Texto explicativo.",
-  "confidence": <0-100>
+  "justification": "Texto explicativo."
 }}
 """
 
+
+def _run_single_classification(prompt: str, model: str = None) -> dict:
+    """
+    Run a single LLM classification and return parsed result.
+    Returns dict with 'classification' and 'justification' keys.
+    """
     output = run_ollama(prompt, model=model).strip()
 
     json_match = re.search(r'\{[\s\S]*\}', output)
@@ -131,23 +132,64 @@ Saída obrigatória: JSON no formato abaixo, sem texto adicional:
         if classification not in VALID_CLASSES:
             classification = "unverified"
         justification = parsed.get("justification", "").strip()
-        confidence = parsed.get("confidence", 0)
     except json.JSONDecodeError:
         classification = "unverified"
         justification = output[:300] if output else "Não foi possível interpretar a resposta do modelo."
-        confidence = 0
+
+    return {"classification": classification, "justification": justification}
+
+
+def _aggregate_consistency(runs: list, claim: str) -> dict:
+    """
+    Aggregate N classification runs into a single result with consistency-based confidence.
+
+    Confidence = (runs agreeing with majority / total runs) × 100
+    """
+    from collections import Counter
+
+    votes = [r["classification"] for r in runs]
+    counter = Counter(votes)
+    majority_class, majority_count = counter.most_common(1)[0]
+    confidence = round((majority_count / len(runs)) * 100, 1)
+
+    # Use the justification from the first run that returned the majority classification
+    justification = next(
+        (r["justification"] for r in runs if r["classification"] == majority_class),
+        "Sem justificativa disponível."
+    )
 
     result = {
         "claim": claim,
-        "classification": classification,
+        "classification": majority_class,
         "justification": justification,
         "confidence": confidence,
+        "consistency_detail": votes,
         "strategy": "ollama_verdict",
         "timestamp": datetime.utcnow().isoformat()
     }
 
-    print(f"✅ [OLLAMA] Alegação classificada como: {classification.upper()}")
+    print(f"✅ [OLLAMA] Alegação classificada como: {majority_class.upper()} "
+          f"(consistência: {confidence}% — {majority_count}/{len(runs)} concordam)")
     return result
+
+
+def classify_ollama_verdict(claim: str, evidences: list, model: str = None, n_runs: int = None) -> dict:
+    """
+    Classifica a alegação usando Ollama LLM com múltiplas rodadas de consistência.
+    Confidence is computed as the percentage of runs that agree on the majority classification.
+    """
+    n_runs = n_runs or CONSISTENCY_RUNS
+    evidence_text = _build_evidence_text(evidences)
+    prompt = _build_classification_prompt(claim, evidence_text)
+
+    runs = []
+    for i in range(n_runs):
+        print(f"  🔄 Rodada {i + 1}/{n_runs}...")
+        run_result = _run_single_classification(prompt, model=model)
+        runs.append(run_result)
+        print(f"     → {run_result['classification']}")
+
+    return _aggregate_consistency(runs, claim)
 
 
 # ============================================================
