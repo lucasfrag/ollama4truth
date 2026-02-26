@@ -1,8 +1,9 @@
 fastapi
 uvicorn
 requests
-rank-bm25
 python-dotenv
-beautifulsoup4
-google-api-python-client
-tqdm
+rank-bm25
+sentence-transformers
+numpy
+torch
+scikit-learn
