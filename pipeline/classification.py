@@ -69,10 +69,8 @@ def _build_evidence_text(evidences: list) -> str:
             if len(text) > MAX_EVIDENCE_CHARS:
                 text = text[:MAX_EVIDENCE_CHARS] + "... [truncado]"
 
-            label_info = f" [Rótulo do fact-checker: {r['label']}]" if r.get("label") else ""
-
             parts.append(
-                f"--- Artigo {article_num}{label_info} ---\n"
+                f"--- Artigo {article_num} ---\n"
                 f"Título: {title}\n"
                 f"Texto:\n{text}"
             )
