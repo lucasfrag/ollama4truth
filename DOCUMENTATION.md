@@ -22,11 +22,14 @@ Ollama4Truth is an automated fact-checking system developed as part of a **CNPq-
 ### Core Capabilities
 
 - **Question Generation**: Uses a local LLM (via Ollama) to generate investigative questions from a claim
-- **Evidence Retrieval**: Searches a local corpus using BM25, semantic (nomic-embed-text-v1.5 + chunk_pool), or hybrid retrieval — switchable at runtime via webapp dropdown
-- **Claim Classification**: Two strategies — LLM-based verdict (negation-aware) and corpus label majority voting
+- **Evidence Retrieval**: Searches a local corpus using BM25, semantic, or hybrid retrieval — switchable at runtime
+- **Per-Question Answering**: Each question is answered individually by the LLM based on its retrieved evidence
+- **Claim Classification**: Two strategies — LLM-based verdict with multi-run consistency, and corpus label majority voting
+- **Multi-Run Consistency**: Classification runs N times (default: 3); confidence = % of runs that agree (not LLM self-reported)
 - **Runtime Model Selection**: Switch between any downloaded Ollama model via webapp dropdown
-- **Claim History**: Every analysis is saved to `data/history.jsonl`; browse, expand details, and clear past results
+- **Claim History**: Every analysis is saved to `data/history.jsonl`; browse, expand Q&A details, and clear past results
 - **Real-time Streaming**: Results stream to the web interface via Server-Sent Events (SSE)
+- **Dark Theme UI**: Dark navy background with Portuguese labels
 
 ### Technology Stack
 
@@ -43,27 +46,33 @@ Ollama4Truth is an automated fact-checking system developed as part of a **CNPq-
 
 ## 2. Architecture
 
-### Pipeline Flow
+### Pipeline Flow (4 Steps)
 
 ```
 User Claim
      │
      ▼
 ┌─────────────────────┐
-│  Question Generation │  ← Ollama LLM (qwen3:14b)
-│  generate_questions() │
+│  1. Question Gen.    │  ← Ollama LLM
+│  generate_questions()│
 └─────────┬───────────┘
           │ 3-5 investigative questions
           ▼
 ┌─────────────────────┐
-│  Evidence Retrieval  │  ← Mode: rag | web | hybrid
+│  2. Evidence Retr.   │  ← Mode: rag | web | hybrid
 │  retrieve_evidence() │
 └─────────┬───────────┘
-          │ Grouped evidence per question
+          │ Evidence grouped per question
           ▼
 ┌─────────────────────┐
-│   Classification     │  ← Strategy: ollama_verdict | label_vote
-│   classify_claim()   │
+│  3. Answer Questions │  ← Ollama LLM (per question)
+│  answer_all_questions│
+└─────────┬───────────┘
+          │ Q&A pairs with evidence
+          ▼
+┌─────────────────────┐
+│  4. Classification   │  ← Strategy: ollama_verdict | label_vote
+│  classify_claim()    │  ← Multi-run consistency (3 runs)
 └─────────┬───────────┘
           │ Verdict + confidence + justification
           ▼
@@ -85,12 +94,13 @@ ollama4truth/
 │   ├── retrieve_evidence.py       # Multi-mode retrieval dispatcher
 │   ├── rag_retrieval.py           # RAGIndex class (BM25 + semantic)
 │   ├── data_loader.py             # JSONL corpus loader + label normalization
+│   ├── answer_questions.py        # Per-question answering via Ollama
 │   └── classification.py          # Verdict strategies (LLM + label voting)
 │
 ├── webapp/
 │   ├── index.html                 # UI with mode/retrieval/strategy/model dropdowns + history
-│   ├── script.js                  # SSE client, dynamic rendering, history panel
-│   └── style.css                  # Responsive styling
+│   ├── script.js                  # SSE client, Q&A rendering, history panel
+│   └── style.css                  # Dark theme styling
 │
 └── data/
     ├── results.json               # Latest pipeline output (auto-generated, gitignored)
@@ -107,6 +117,7 @@ api.py
        ├─ pipeline/retrieve_evidence.py
        │    └─ pipeline/rag_retrieval.py
        │         └─ pipeline/data_loader.py
+       ├─ pipeline/answer_questions.py     (uses Ollama)
        └─ pipeline/classification.py
             └─ pipeline/data_loader.py (imports FALSE_LABELS, TRUE_LABELS)
 ```
@@ -159,9 +170,9 @@ Labels are normalized by:
 
 Two label sets are defined for the label voting strategy:
 
-**FALSE_LABELS** (22 variants): `falso`, `fake`, `enganoso`, `distorcido`, `golpe`, `manipulado`, `boato`, `nao e verdade`, `impreciso`, `exagerado`, `insustentavel`, `sem evidencia`, `sem contexto`, `descontextualizado`, `alterado`, `nao ha evidencias`, `nao e bem assim`, `falso/enganoso`
+**FALSE_LABELS** (22 variants): `falso`, `fake`, `enganoso`, `distorcido`, `golpe`, `manipulado`, `boato`, etc.
 
-**TRUE_LABELS** (8 variants): `verdadeiro`, `fato`, `verdade`, `correto`, `real`, `comprovado`, `confirmado`, `ainda e verdade`
+**TRUE_LABELS** (8 variants): `verdadeiro`, `fato`, `verdade`, `correto`, `real`, `comprovado`, `confirmado`, etc.
 
 ### 3.4 Data Loader (`pipeline/data_loader.py`)
 
@@ -173,14 +184,6 @@ Two label sets are defined for the label voting strategy:
 | `full_text(article)` | Concatenates titulo + subtitulo + texto for retrieval |
 | `_normalize_label(label)` | Strips accents, lowercases labels |
 
-**Usage:**
-
-```python
-from pipeline.data_loader import load_corpus
-corpus = load_corpus("/path/to/data/raw")
-# Returns: list of 19,502 article dicts
-```
-
 ---
 
 ## 4. Pipeline Components
@@ -189,25 +192,11 @@ corpus = load_corpus("/path/to/data/raw")
 
 Generates 3-5 neutral, investigative questions from a claim using Ollama.
 
-**Model**: Configured via `OLLAMA_MODEL` in `.env` (default: `qwen3:14b`). Can be overridden at runtime by selecting a different model in the webapp dropdown.
+**Model**: Configured via `OLLAMA_MODEL` in `.env`. Can be overridden at runtime.
 
-**Prompt strategy**: The prompt frames the task as an academic fact-checking system and uses an "INPUT TEXT" wrapper to avoid triggering safety filters on sensitive topics. Includes a concrete example to guide output format.
+**Prompt strategy**: The prompt frames the task as an academic fact-checking system and uses an "INPUT TEXT" wrapper to avoid triggering safety filters.
 
 **Fallback behavior**: If the LLM refuses or generates no valid questions, the original claim text is used as the search query.
-
-**Output format:**
-
-```python
-{
-    "claim": "Vacinas causam autismo",
-    "questions": [
-        "Existem estudos científicos que associam vacinas ao autismo?",
-        "O que a OMS diz sobre a relação entre vacinas e autismo?",
-        "Qual é a origem da teoria de que vacinas causam autismo?"
-    ],
-    "timestamp": "2026-02-17T21:07:00.000000"
-}
-```
 
 ### 4.2 Evidence Retrieval (`pipeline/retrieve_evidence.py`)
 
@@ -217,92 +206,68 @@ Dispatches evidence retrieval to one of 3 modes:
 
 - Searches the local BM25/semantic index for each generated question
 - Returns articles with source, label, and snippet
-- Evidence is grouped per-question with deduplication across questions
+- Each question retrieves its own top-k results independently
 
 #### Mode: `web` (Google Search)
 
-- Uses Google Custom Search API (requires `GOOGLE_API_KEY` and `GOOGLE_CSE_ID`)
+- Uses Google Custom Search API
 - Returns web results with title, link, and snippet
-- Original Ollama4Truth behavior (preserved)
 
 #### Mode: `hybrid` (RAG → Web Fallback)
 
 - First tries RAG retrieval
-- If fewer than `MIN_RAG_RESULTS` (2) results, falls back to Google Search
-- Merges RAG and web results, RAG first
+- If fewer than 2 results, falls back to Google Search
 
-**Evidence structure (per question):**
+### 4.3 Per-Question Answering (`pipeline/answer_questions.py`)
 
-```python
-{
-    "question": "Existem estudos que associam vacinas ao autismo?",
-    "results": [
-        {
-            "title": "É falso que vacinas causam autismo",
-            "link": "https://example.com/article",
-            "snippet": "Primeiro parágrafo do artigo...",
-            "score": 42.5,
-            "source": "boatos",
-            "label": "falso"
-        }
-    ]
-}
-```
+**NEW** — This step answers each investigative question individually using its retrieved evidence.
 
-### 4.3 RAG Index (`pipeline/rag_retrieval.py`)
+For each question + evidence pair, the LLM is prompted to:
 
-The `RAGIndex` class manages the retrieval indices. **Both BM25 and semantic indices are always built at startup**, allowing runtime switching via the `method` parameter.
+- Answer **ONLY** based on the provided evidence
+- Be concise (max 3 sentences)
+- Say "Sem informação suficiente" if evidence doesn't cover the question
+
+This produces structured Q&A pairs that feed into the classification step, enabling the LLM to reason from intermediate answers rather than raw article dumps.
+
+**Key functions:**
+
+| Function | Description |
+|---|---|
+| `answer_single_question(question, results, model)` | Answer one question from its evidence |
+| `answer_all_questions(evidences, model)` | Answer all questions, adds `answer` field to each evidence group |
+
+### 4.4 RAG Index (`pipeline/rag_retrieval.py`)
+
+The `RAGIndex` class manages the retrieval indices. **Both BM25 and semantic indices are always built at startup**, allowing runtime switching.
 
 **Retrieval methods (switchable per query):**
 
 | Method | Description | Quality |
 |---|---|---|
 | `bm25` | BM25Okapi keyword matching | Good for exact terms |
-| `semantic` | Cosine similarity via sentence-transformer (default: `paraphrase-multilingual-mpnet-base-v2`) with chunk_pool encoding | Better for paraphrases |
+| `semantic` | Cosine similarity via sentence-transformer with chunk_pool encoding | Better for paraphrases |
 | `hybrid` | Weighted combination of BM25 + semantic scores | Best overall |
 
 **Encoding strategy (chunk_pool):**
 
 - Each article's `full_text` is split into 500-character chunks
-- All chunks are embedded individually with the sentence-transformer model
+- All chunks are embedded individually
 - At retrieval: cosine similarity computed per chunk, **max-sim** taken per article
-- First run encodes ~156k chunks (~10 min on A6000), cached as `.npy` files for instant restarts
+- First run encodes ~156k chunks (~10 min), cached as `.npy` files for instant restarts
 
-**Key methods:**
-
-| Method | Description |
-|---|---|
-| `retrieve(query, k=5, method=None)` | Retrieve top-k articles for a single query (method: bm25/semantic/hybrid) |
-| `retrieve_multi_query(queries, k_per_query=3, k_total=5, method=None)` | Retrieve across multiple queries with deduplication |
-
-**Result format:**
-
-```python
-{
-    "title":   str,     # Article title
-    "link":    str,     # Article URL
-    "snippet": str,     # First 300 chars of article text
-    "score":   float,   # Relevance score (method-dependent)
-    "source":  str,     # Source key (g1, lupa, etc.)
-    "label":   str,     # Normalized article label
-}
-```
-
-**Semantic model**: `paraphrase-multilingual-mpnet-base-v2` (configurable via `SEMANTIC_MODEL` env var)
-
-**Model cache**: All HuggingFace models are stored in `MODEL_CACHE_DIR` (default: `/mnt/E-SSD/mussi/model_cache`)
-
-### 4.4 Classification (`pipeline/classification.py`)
+### 4.5 Classification (`pipeline/classification.py`)
 
 Two verdict strategies with automatic fallback:
 
 #### Strategy: `ollama_verdict`
 
-- Sends the claim + all evidence to Ollama LLM
-- **Negation-aware prompt**: Explicitly instructs the LLM to evaluate the claim as written, paying attention to negations (e.g., "X NÃO causa Y" + evidence says "falso" → SUPPORTED)
-- LLM classifies as: `Supported`, `Refuted`, `Not Enough Evidence`, or `Conflicting Evidence/Cherry-picking`
-- Returns JSON with classification, justification, and confidence (0-100%)
-- Handles JSON parsing errors gracefully
+- Sends the claim + per-question Q&A pairs to Ollama LLM
+- **Multi-run consistency**: Runs the classification N times (default: 3, configurable via `CONSISTENCY_RUNS`)
+- **Confidence = (agreeing runs / total runs) × 100** — not LLM self-reported
+- Classifies as: `Apoiada`, `Refutada`, `Insuficiente`, or `Contraditória`
+- Classification prompt includes structured Q&A pairs (question + answer + article titles), not raw article text
+- Article fact-checker labels are NOT shown to the LLM to prevent label bias
 
 #### Strategy: `label_vote`
 
@@ -311,17 +276,17 @@ Two verdict strategies with automatic fallback:
 - Majority wins → verdict + confidence percentage
 - **Auto-fallback**: If evidence has no labels (e.g., web-only results), falls back to `ollama_verdict`
 
-**Output format (both strategies):**
+**Output format (ollama_verdict):**
 
 ```python
 {
     "claim": "Vacinas causam autismo",
-    "classification": "Refuted",
-    "justification": "5 de 5 artigos classificam como falso/enganoso.",
+    "classification": "Refutada",
+    "justification": "As evidências mostram que não há relação entre vacinas e autismo.",
     "confidence": 100.0,
-    "strategy": "label_vote",
-    "label_breakdown": {"falso": 4, "enganoso": 1},
-    "timestamp": "2026-02-17T21:07:30.000000"
+    "consistency_detail": ["Refutada", "Refutada", "Refutada"],
+    "strategy": "ollama_verdict",
+    "timestamp": "2026-02-26T18:00:00.000000"
 }
 ```
 
@@ -347,25 +312,30 @@ Analyzes a claim via Server-Sent Events streaming.
 | `mode` | string | `rag` | Retrieval mode: `rag`, `web`, `hybrid` |
 | `strategy` | string | `ollama_verdict` | Verdict strategy: `ollama_verdict`, `label_vote` |
 | `retrieval_method` | string | `bm25` | RAG retrieval method: `bm25`, `semantic`, `hybrid` |
-| `ollama_model` | string | *(from .env)* | Ollama model to use (empty = `.env` default) |
+| `ollama_model` | string | *(from .env)* | Ollama model to use |
 
-**Example:**
+**SSE stream messages:**
 
 ```
-GET /analyze-stream?claim=Vacinas+causam+autismo&mode=rag&strategy=label_vote&retrieval_method=semantic&ollama_model=gemma3:27b
+🚀 Iniciando pipeline para: "..." [modo=rag, ...]
+🧩 Gerando perguntas...
+✅ 3 perguntas geradas.
+🔍 Buscando evidências...
+✅ 15 evidências encontradas.
+📝 Respondendo pergunta 1/3: ...
+   ✔ A OMS recomenda o uso de máscaras...
+📝 Respondendo pergunta 2/3: ...
+🧠 Classificando alegação (rodada 1/3)...
+   ✔ Rodada 1: Apoiada
+🧠 Classificando alegação (rodada 2/3)...
+✅ Classificação: Apoiada (consistência: 100% — 3/3 concordam)
+🎯 Pipeline concluído com sucesso!
+{...final JSON result...}
 ```
-
-**Response**: SSE stream with intermediate log messages, followed by a final JSON result.
 
 ### `GET /health`
 
-Health check endpoint.
-
-**Response:**
-
-```json
-{"status": "ok", "message": "API está rodando e pronta para receber claims"}
-```
+Health check endpoint. Returns `{"status": "ok", ...}`.
 
 ### `GET /` (Webapp)
 
@@ -375,64 +345,38 @@ Serves the web interface from the `webapp/` directory.
 
 Returns available Ollama models for the dropdown selector.
 
-**Response:**
-
-```json
-{
-  "default": "llama3.1:8b",
-  "models": [
-    {"name": "llama3.1:8b", "size": "4.9 GB"},
-    {"name": "gemma3:27b", "size": "17 GB"}
-  ]
-}
-```
-
 ### `GET /history`
 
 Returns all past claim analyses, most recent first.
-
-**Response:**
-
-```json
-{
-  "count": 5,
-  "entries": [{"claim": "...", "label": "Refuted", "ollama_model": "llama3.1:8b", ...}]
-}
-```
 
 ### `GET /history/clear`
 
 Deletes the `data/history.jsonl` file, clearing all history.
 
-**Response:**
-
-```json
-{"status": "ok", "message": "History cleared"}
-```
-
 ---
 
 ## 6. Webapp Interface
 
-The webapp provides a single-page interface for claim verification.
+The webapp provides a single-page interface for claim verification with a **dark navy theme**.
 
 ### UI Components
 
-1. **Claim input**: Text field for entering the claim
-2. **Mode selector**: Dropdown to choose retrieval mode (RAG/Web/Hybrid)
-3. **Retrieval method selector**: Dropdown to choose RAG retrieval method (BM25/Semântico/Híbrido)
-4. **Strategy selector**: Dropdown to choose verdict strategy (Ollama LLM/Label Vote)
-5. **Model selector**: Dropdown to choose Ollama model (populated from `GET /models` on page load)
-6. **Sidebar (Perguntas)**: Lists generated questions with evidence counts; clickable to filter evidence
-7. **Main panel**: Displays verdict badge, confidence, justification, and evidence cards
-8. **Evidence cards**: Show article title (linked), source badge, label badge, and snippet
-9. **History panel**: Toggleable panel showing all past analyses, expandable to see full details (questions, evidence, rationale, model used)
+1. **Claim input**: Text field for entering the claim (label: "alegação")
+2. **Mode selector**: Modo de Busca (RAG/Web/Hybrid)
+3. **Retrieval method selector**: Método de Recuperação (BM25/Semântico/Híbrido)
+4. **Strategy selector**: Estratégia de Veredito (Ollama LLM/Votação por Labels)
+5. **Model selector**: Modelo Ollama (populated from `GET /models`)
+6. **Sidebar (Perguntas)**: Lists generated questions with evidence counts; clickable to scroll to Q&A card
+7. **Main panel**: Displays verdict badge, consistency score, justification, and Q&A cards
+8. **Q&A cards**: Each card shows: question → LLM answer → evidence articles (with source/label badges)
+9. **History panel**: Toggleable panel showing past analyses, expandable to see full Q&A details
 
-### Evidence Display Features
+### Display Features
 
 - **Source badges**: Uppercase colored badges (BOATOS, LUPA, G1, etc.)
 - **Label badges**: Color-coded — red for false/enganoso, green for verdadeiro/fato, gray for others
-- **Verdict badges**: Green (Supported), Red (Refuted), Yellow (Not Enough Evidence)
+- **Verdict badges**: Green (Apoiada), Red (Refutada), Yellow (Insuficiente)
+- **Consistency score**: Shows "100% (3/3)" instead of LLM self-reported confidence
 
 ---
 
@@ -444,10 +388,10 @@ All configuration is in `.env`:
 # GPU selection
 CUDA_VISIBLE_DEVICES=0
 
-# Ollama model for question generation and classification (default, overridable via webapp)
+# Ollama model (default, overridable via webapp)
 OLLAMA_MODEL=qwen3:14b
 
-# Ollama models directory (E-SSD)
+# Ollama models directory
 OLLAMA_MODELS=/mnt/E-SSD/model_cache
 
 # Data directory containing JSONL dataset subfolders
@@ -465,21 +409,13 @@ EMBEDDINGS_CACHE_DIR=./data/embeddings_cache
 # HuggingFace/Torch model download directory
 MODEL_CACHE_DIR=/mnt/E-SSD/mussi/model_cache
 
+# Number of consistency runs for LLM classification confidence
+CONSISTENCY_RUNS=3
+
 # Google Search API keys (only needed for "web" and "hybrid" modes)
 # GOOGLE_API_KEY=your_key_here
 # GOOGLE_CSE_ID=your_cse_id_here
 ```
-
-### Available Ollama Models (on this server)
-
-| Model | Size | Notes |
-|---|---|---|
-| `llama3.2:1b` | 1.3 GB | Fast but safety filters too aggressive |
-| `llama3:8b` | 4.7 GB | Good balance |
-| `llama3.1:8b` | 4.9 GB | Good instruction following |
-| `deepseek-r1:7b` | 4.7 GB | Reasoning model, slower |
-| `qwen3:14b` | 9.3 GB | **Recommended** — very capable, current default |
-| `gemma3:27b` | 17 GB | Excellent but large |
 
 ---
 
@@ -537,7 +473,6 @@ Wait for `Application startup complete` — BM25 builds in ~5s, semantic encodin
 **Remote (SSH tunnel)**:
 
 ```bash
-# On your local machine:
 ssh -L 8000:localhost:8000 <server-hostname>
 # Then open: http://localhost:8000
 ```
@@ -564,12 +499,6 @@ ssh -L 8000:localhost:8000 <server-hostname>
 2. Ensure the JSONL file follows the unified schema
 3. Place the file in the appropriate subdirectory under `DATA_DIR`
 
-### Switching the Semantic Model
-
-1. Update `SEMANTIC_MODEL` in `.env`
-2. Delete any cached embeddings (if `EMBEDDINGS_CACHE_DIR` is set)
-3. Restart the server
-
 ---
 
 ## 10. Troubleshooting
@@ -577,7 +506,6 @@ ssh -L 8000:localhost:8000 <server-hostname>
 ### "Address already in use" when starting Ollama
 
 ```bash
-# Ollama is already running as a system service
 sudo systemctl stop ollama
 CUDA_VISIBLE_DEVICES=0 ollama serve
 ```
@@ -585,27 +513,31 @@ CUDA_VISIBLE_DEVICES=0 ollama serve
 ### Question generation returns the claim instead of questions
 
 - The LLM safety filter is blocking the topic
-- Try a different model via the webapp dropdown, or change `OLLAMA_MODEL` in `.env`
+- Try a different model via the webapp dropdown
 - The system automatically falls back to using the claim as a search query
 
 ### No evidence found in RAG mode
 
 - Verify `DATA_DIR` is set correctly in `.env`
 - Check that JSONL files exist: `ls $DATA_DIR/*/`
-- Run the data loader test: `python -m pipeline.data_loader`
+
+### Classification always says "Refutada" for true claims
+
+- This was caused by article fact-checker labels ("falso") biasing the LLM
+- **Fixed**: Article labels are no longer shown to the LLM in the classification prompt
+- The LLM now reasons from per-question answers + article content, not labels
+
+### Confidence score shows only 33%, 67%, or 100%
+
+- This is expected. Confidence is computed as multi-run consistency (N=3 by default)
+- Possible values: 33% (no agreement), 67% (2/3 agree), 100% (3/3 agree)
+- Adjust with `CONSISTENCY_RUNS` env var (e.g., 5 for finer granularity)
 
 ### GPU usage on wrong device
 
 - Set `CUDA_VISIBLE_DEVICES=0` both when starting Ollama AND the API server
-- For the Ollama system service: `sudo systemctl edit ollama` → add `Environment="CUDA_VISIBLE_DEVICES=0"`
 
 ### Webapp not accessible remotely
 
 - Use SSH port forwarding: `ssh -L 8000:localhost:8000 <server>`
 - Ensure the API server is started with `--host 0.0.0.0`
-
-### label_vote shows "Not Enough Evidence" unexpectedly
-
-- Only works with RAG/hybrid modes (web results don't have labels)
-- Check if the article labels match the `FALSE_LABELS`/`TRUE_LABELS` sets
-- Falls back to `ollama_verdict` automatically when no labels are found

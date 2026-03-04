@@ -29,9 +29,9 @@ if os.getenv("OLLAMA_MODELS"):
 
 from pipeline.generate_questions import generate_questions
 from pipeline.retrieve_evidence import retrieve_evidence, set_rag_index
+from pipeline.answer_questions import answer_single_question, answer_all_questions
 from pipeline.classification import (
     classify_claim,
-    _build_evidence_text,
     _build_classification_prompt,
     _run_single_classification,
     _aggregate_consistency,
@@ -112,7 +112,8 @@ def run_pipeline(claim: str, mode: str = "rag", strategy: str = "ollama_verdict"
     Executa o pipeline completo:
     1. Geração de perguntas
     2. Recuperação de evidências (rag/web/hybrid)
-    3. Classificação (ollama_verdict/label_vote)
+    3. Respostas às perguntas com base nas evidências
+    4. Classificação (ollama_verdict/label_vote)
     """
     model = ollama_model or os.getenv("OLLAMA_MODEL", "llama3.1:8b")
     print(f"\n🚀 Iniciando pipeline para a alegação:\n   \"{claim}\"")
@@ -126,10 +127,15 @@ def run_pipeline(claim: str, mode: str = "rag", strategy: str = "ollama_verdict"
     # === 2️⃣ Buscar evidências ===
     evidence_output = retrieve_evidence(claim, questions, mode=mode, retrieval_method=retrieval_method)
 
-    # === 3️⃣ Classificação ===
+    # === 3️⃣ Responder às perguntas ===
+    evidences = evidence_output.get("evidences", [])
+    print(f"\n📝 Respondendo às perguntas com base nas evidências...")
+    answer_all_questions(evidences, model=model)
+
+    # === 4️⃣ Classificação ===
     classification_output = classify_claim(
         claim,
-        evidence_output.get("evidences", []),
+        evidences,
         strategy=strategy,
         model=model,
     )
@@ -140,7 +146,7 @@ def run_pipeline(claim: str, mode: str = "rag", strategy: str = "ollama_verdict"
         "timestamp": datetime.now().isoformat(),
         "ollama_model": model,
         "questions": questions_output,
-        "evidences": evidence_output.get("evidences", []),
+        "evidences": evidences,
         "label": classification_output.get("classification"),
         "rationale": classification_output.get("justification"),
         "confidence": classification_output.get("confidence"),
@@ -178,16 +184,27 @@ def run_pipeline_stream(claim: str, mode: str = "rag", strategy: str = "ollama_v
     # === 2️⃣ Buscar evidências ===
     yield f"🔍 Buscando evidências (modo={mode}, recuperação={retrieval_method or 'default'})...", None
     evidence_output = retrieve_evidence(claim, questions, mode=mode, retrieval_method=retrieval_method)
-    total_ev = sum(len(e.get("results", [])) for e in evidence_output.get("evidences", []))
+    evidences = evidence_output.get("evidences", [])
+    total_ev = sum(len(e.get("results", [])) for e in evidences)
     yield f"✅ {total_ev} evidências encontradas.", None
 
-    # === 3️⃣ Classificação ===
+    # === 3️⃣ Responder às perguntas ===
+    yield f"📝 Respondendo às perguntas com base nas evidências...", None
+    for i, ev_group in enumerate(evidences, 1):
+        question = ev_group.get("question", "")
+        results = ev_group.get("results", [])
+        yield f"📝 Respondendo pergunta {i}/{len(evidences)}: {question[:60]}...", None
+        answer = answer_single_question(question, results, model=model)
+        ev_group["answer"] = answer
+        yield f"   ✔ {answer[:100]}...", None
+    yield f"✅ {len(evidences)} perguntas respondidas.", None
+
+    # === 4️⃣ Classificação ===
     if strategy == "ollama_verdict":
         n_runs = CONSISTENCY_RUNS
         yield f"🧠 Classificando alegação ({n_runs} rodadas de consistência)...", None
 
-        evidence_text = _build_evidence_text(evidence_output.get("evidences", []))
-        prompt = _build_classification_prompt(claim, evidence_text)
+        prompt = _build_classification_prompt(claim, evidences)
 
         runs = []
         for i in range(n_runs):
@@ -204,7 +221,7 @@ def run_pipeline_stream(claim: str, mode: str = "rag", strategy: str = "ollama_v
         yield f"🧠 Classificando alegação (estratégia={strategy})...", None
         classification_output = classify_claim(
             claim,
-            evidence_output.get("evidences", []),
+            evidences,
             strategy=strategy,
             model=model,
         )
@@ -216,7 +233,7 @@ def run_pipeline_stream(claim: str, mode: str = "rag", strategy: str = "ollama_v
         "timestamp": datetime.now().isoformat(),
         "ollama_model": model,
         "questions": questions_output,
-        "evidences": evidence_output.get("evidences", []),
+        "evidences": evidences,
         "label": classification_output.get("classification"),
         "rationale": classification_output.get("justification"),
         "confidence": classification_output.get("confidence"),

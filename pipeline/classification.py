@@ -22,6 +22,7 @@ from pipeline.data_loader import FALSE_LABELS, TRUE_LABELS
 def run_ollama(prompt: str, model: str = None) -> str:
     """
     Executa um modelo Ollama localmente e retorna a resposta como texto.
+    Strips thinking tokens (<think>...</think>) from models that use chain-of-thought.
     """
     model = model or os.getenv("OLLAMA_MODEL", "llama3.1")
 
@@ -33,7 +34,14 @@ def run_ollama(prompt: str, model: str = None) -> str:
             capture_output=True,
             check=True
         )
-        return result.stdout.decode("utf-8", errors="ignore").strip()
+        output = result.stdout.decode("utf-8", errors="ignore").strip()
+
+        # Strip <think>...</think> blocks (qwen3, deepseek-r1 thinking mode)
+        output = re.sub(r'<think>[\s\S]*?</think>', '', output).strip()
+        # Strip "Thinking..." prefix that some models output
+        output = re.sub(r'^Thinking\.\.\.[\s\S]*?\.\.\.done thinking\.\s*', '', output, flags=re.IGNORECASE).strip()
+
+        return output
     except subprocess.CalledProcessError as e:
         print("❌ Erro ao executar Ollama:", e.stderr)
         return ""
@@ -115,13 +123,13 @@ def _build_classification_prompt(claim: str, evidences: list) -> str:
 
     qa_text = "\n\n".join(qa_parts) if qa_parts else "(Nenhuma pergunta ou evidência disponível)"
 
-    return f"""Você é um sistema de checagem de fatos acadêmico. Sua tarefa é avaliar se uma ALEGAÇÃO é verdadeira ou falsa, com base nas respostas às perguntas investigativas e nas evidências coletadas.
+    return f"""Você é um sistema de checagem de fatos acadêmico. Sua tarefa é avaliar se uma ALEGAÇÃO é apoiada, refutada ou insuficiente em relação às evidências recuperadas, com base nas respostas às perguntas investigativas.
 
 IMPORTANTE — LEIA COM ATENÇÃO:
 - Você deve avaliar se a ALEGAÇÃO EXATA fornecida é apoiada ou refutada.
 - Preste muita atenção a NEGAÇÕES na alegação.
 - Analise as RESPOSTAS às perguntas investigativas — elas resumem o que as evidências dizem.
-- Analise o SENTIDO SEMÂNTICO da alegação e compare com as respostas.
+- Analise o SENTIDO SEMÂNTICO da alegação e compare com as respostas das perguntas investigativas.
 
 Alegação: "{claim}"
 
@@ -129,10 +137,10 @@ Perguntas investigativas e respostas:
 {qa_text}
 
 Classifique a alegação em uma das categorias:
-- Apoiada: a alegação É VERDADEIRA segundo as evidências
-- Refutada: a alegação É FALSA segundo as evidências
-- Insuficiente: evidências insuficientes
-- Contraditória: evidências contraditórias
+- Apoiada: a alegação É APOIADA segundo as respostas às perguntas investigativas
+- Refutada: a alegação É REFUTADA segundo as respostas às perguntas investigativas
+- Insuficiente: respostas insuficientes
+- Contraditória: respostas contraditórias
 
 Saída obrigatória: JSON no formato abaixo, sem texto adicional:
 
