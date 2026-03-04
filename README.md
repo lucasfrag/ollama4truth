@@ -4,13 +4,16 @@ An automated fact-checking system that verifies claims against a curated corpus 
 
 ## ✨ Features
 
+- **4-Step Pipeline**: Question generation → Evidence retrieval → Per-question answering → Classification
 - **3 Retrieval Modes**: RAG (local corpus), Web (Google Search), Hybrid (RAG → web fallback)
-- **3 Retrieval Methods**: BM25 (keyword), Semantic (embeddings), Hybrid (combined) — switchable at runtime via webapp dropdown
+- **3 Retrieval Methods**: BM25 (keyword), Semantic (embeddings), Hybrid (combined) — switchable at runtime
 - **2 Verdict Strategies**: Ollama LLM classification, Label majority voting
+- **Multi-Run Consistency**: Classification runs N times (default: 3); confidence = % agreement (not LLM self-reported)
+- **Per-Question Answering**: Each investigative question is answered individually by the LLM using its retrieved evidence before final classification
 - **Runtime Model Selector**: Switch between any downloaded Ollama model via webapp dropdown
-- **Claim History**: Every analysis is saved; browse, expand, and clear past results in the history panel
-- **Negation-Aware Classification**: LLM prompt handles negated claims correctly
-- **Semantic Search**: Sentence-transformer embeddings (default: `paraphrase-multilingual-mpnet-base-v2`) with chunk & pool encoding (500-char chunks, max-sim)
+- **Claim History**: Every analysis is saved; browse, expand Q&A details, and clear past results
+- **Dark Theme UI**: Dark navy background with white text, all labels translated to Portuguese
+- **Semantic Search**: Sentence-transformer embeddings with chunk & pool encoding (500-char chunks, max-sim)
 - **Embedding Caching**: First run encodes articles (~10 min), subsequent restarts are instant
 - **19,502 articles** from 6 Brazilian fact-checking sources (G1, Lupa, Aos Fatos, Estadão, Boatos.org, UOL Confere)
 - **Web interface** with real-time SSE streaming
@@ -65,11 +68,12 @@ ollama4truth/
 │   ├── retrieve_evidence.py     # Multi-mode evidence retrieval dispatcher
 │   ├── rag_retrieval.py         # BM25 + semantic RAG index (RAGIndex class)
 │   ├── data_loader.py           # Unified JSONL corpus loader
+│   ├── answer_questions.py      # Per-question answering using retrieved evidence
 │   └── classification.py        # Verdict strategies (ollama_verdict, label_vote)
 ├── webapp/
 │   ├── index.html               # Main UI with mode/retrieval/strategy/model dropdowns
-│   ├── script.js                # SSE client, evidence rendering, history panel
-│   └── style.css                # Styling with source/label badges
+│   ├── script.js                # SSE client, Q&A rendering, history panel
+│   └── style.css                # Dark theme styling with source/label badges
 └── data/
     ├── results.json             # Latest pipeline output (auto-generated, gitignored)
     ├── history.jsonl            # Claim analysis history (auto-generated, gitignored)
@@ -88,6 +92,7 @@ ollama4truth/
 | `ENCODING_STRATEGY` | `chunk_pool` | Encoding strategy: `chunk_pool`, `title_label`, `truncate` |
 | `EMBEDDINGS_CACHE_DIR` | `./data/embeddings_cache` | Directory for cached embeddings (.npy) |
 | `MODEL_CACHE_DIR` | `/mnt/E-SSD/mussi/model_cache` | HuggingFace/Torch model download directory |
+| `CONSISTENCY_RUNS` | `3` | Number of LLM classification runs for confidence calculation |
 | `GOOGLE_API_KEY` | — | For web/hybrid retrieval modes |
 | `GOOGLE_CSE_ID` | — | For web/hybrid retrieval modes |
 

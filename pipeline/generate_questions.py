@@ -10,6 +10,7 @@ load_dotenv()
 def run_ollama(prompt: str, model: str = None) -> str:
     """
     Executa um modelo Ollama localmente e retorna a resposta em texto.
+    Strips thinking tokens from chain-of-thought models.
     """
     model = model or os.getenv("OLLAMA_MODEL", "llama3.1")
 
@@ -21,7 +22,14 @@ def run_ollama(prompt: str, model: str = None) -> str:
             capture_output=True,
             check=True
         )
-        return result.stdout.decode("utf-8", errors="ignore").strip()
+        output = result.stdout.decode("utf-8", errors="ignore").strip()
+
+        # Strip <think>...</think> blocks (qwen3, deepseek-r1 thinking mode)
+        output = re.sub(r'<think>[\s\S]*?</think>', '', output).strip()
+        # Strip "Thinking..." prefix
+        output = re.sub(r'^Thinking\.\.\.[\s\S]*?\.\.\.done thinking\.\s*', '', output, flags=re.IGNORECASE).strip()
+
+        return output
 
     except subprocess.CalledProcessError as e:
         print("❌ Erro ao executar Ollama:", e.stderr)

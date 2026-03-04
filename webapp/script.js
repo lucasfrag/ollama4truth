@@ -74,7 +74,7 @@ form.addEventListener("submit", async (e) => {
 
             console.log("🔍 Resultado final:", finalResult);
             renderClaim(finalResult);
-            renderQuestions(finalResult);
+            renderQuestionsAndAnswers(finalResult);
             return;
         }
 
@@ -134,12 +134,17 @@ function renderClaim(data) {
     }
     result.appendChild(labelEl);
 
-    // Confiança
+    // Confiança (consistency-based)
     if (data.confidence !== null && data.confidence !== undefined) {
         const confEl = document.createElement("div");
         confEl.classList.add("confidence");
         confEl.style.marginLeft = "5px";
-        confEl.textContent = `Confiança: ${data.confidence}%`;
+        if (data.consistency_detail) {
+            const agree = data.consistency_detail.filter(v => v === data.label).length;
+            confEl.textContent = `Consistência: ${data.confidence}% (${agree}/${data.consistency_detail.length})`;
+        } else {
+            confEl.textContent = `Confiança: ${data.confidence}%`;
+        }
         result.appendChild(confEl);
     }
 
@@ -153,41 +158,86 @@ function renderClaim(data) {
     }
 }
 
-// ====================================
-// 🔹 Renderiza perguntas e evidências
-// ====================================
-function renderQuestions(data) {
-    const questions = data.questions?.questions || [];
+// ================================================
+// 🔹 Renderiza perguntas com respostas e evidências
+// ================================================
+function renderQuestionsAndAnswers(data) {
+    const evidences = data.evidences || [];
     questionList.innerHTML = "";
 
-    if (questions.length === 0) {
+    if (evidences.length === 0) {
         questionList.innerHTML = "<li>Nenhuma pergunta gerada.</li>";
         return;
     }
 
-    questions.forEach((q, idx) => {
+    // Sidebar: list of questions (clickable to scroll)
+    evidences.forEach((ev, idx) => {
         const li = document.createElement("li");
-        li.textContent = `${q} (${getEvidenceCount(q)} evidências)`;
+        li.textContent = `${ev.question} (${(ev.results || []).length} evidências)`;
         if (idx === 0) li.classList.add("active");
         li.addEventListener("click", () => {
             document.querySelectorAll("#questionList li").forEach(el => el.classList.remove("active"));
             li.classList.add("active");
-            renderEvidence(q);
+            // Scroll to the corresponding card
+            const card = document.getElementById(`qa-card-${idx}`);
+            if (card) card.scrollIntoView({ behavior: "smooth", block: "start" });
         });
         questionList.appendChild(li);
     });
 
-    // Exibe a primeira evidência automaticamente
-    renderEvidence(questions[0]);
-    renderSummary();
-}
+    // Main panel: Q&A cards with evidence
+    evidences.forEach((ev, idx) => {
+        const card = document.createElement("div");
+        card.classList.add("evidence-card");
+        card.id = `qa-card-${idx}`;
 
-// ===============================
-// 🔹 Conta evidências por pergunta
-// ===============================
-function getEvidenceCount(question) {
-    const evidenceObj = currentData?.evidences?.find(ev => ev.question === question);
-    return evidenceObj ? evidenceObj.results.length : 0;
+        // Question header
+        const qHeader = document.createElement("h3");
+        qHeader.textContent = `❓ ${ev.question}`;
+        card.appendChild(qHeader);
+
+        // Answer
+        if (ev.answer) {
+            const answerEl = document.createElement("div");
+            answerEl.classList.add("rationale");
+            answerEl.innerHTML = `<strong>💬 Resposta:</strong> ${ev.answer}`;
+            card.appendChild(answerEl);
+        }
+
+        // Evidence articles
+        if (ev.results && ev.results.length > 0) {
+            const evHeader = document.createElement("p");
+            evHeader.style.cssText = "font-size:0.85rem;color:#94a3b8;margin-top:12px;margin-bottom:6px;";
+            evHeader.textContent = `📰 ${ev.results.length} artigos consultados:`;
+            card.appendChild(evHeader);
+
+            const ul = document.createElement("ul");
+            ev.results.forEach(res => {
+                const li = document.createElement("li");
+                let sourceInfo = "";
+                if (res.source) {
+                    sourceInfo = `<span class="source-badge">${res.source}</span> `;
+                }
+                if (res.label) {
+                    sourceInfo += `<span class="label-badge-small label-${res.label.includes('fals') || res.label.includes('fake') || res.label.includes('enganoso') ? 'refuted' : res.label.includes('verdade') || res.label.includes('fato') ? 'supported' : 'uncertain'}">${res.label}</span> `;
+                }
+                li.innerHTML = `${sourceInfo}<a href="${res.link}" target="_blank">${res.title}</a>`;
+                if (res.score != null) li.innerHTML += ` <span class="history-score">(${res.score.toFixed(4)})</span>`;
+                ul.appendChild(li);
+            });
+            card.appendChild(ul);
+        } else {
+            const noEv = document.createElement("p");
+            noEv.style.cssText = "font-size:0.8rem;color:#64748b;font-style:italic;";
+            noEv.textContent = "Nenhuma evidência encontrada para esta pergunta.";
+            card.appendChild(noEv);
+        }
+
+        result.appendChild(card);
+    });
+
+    // Update summary
+    renderSummary();
 }
 
 // ===============================
@@ -196,57 +246,17 @@ function getEvidenceCount(question) {
 function renderSummary() {
     const summaryDiv = document.getElementById("summary");
     summaryDiv.innerHTML = "<h3>Resumo de Evidências</h3>";
-    const questions = currentData?.questions?.questions || [];
+    const evidences = currentData?.evidences || [];
 
-    if (questions.length === 0) return;
+    if (evidences.length === 0) return;
 
     const ul = document.createElement("ul");
-    questions.forEach(q => {
+    evidences.forEach(ev => {
         const li = document.createElement("li");
-        li.textContent = `${q} → ${getEvidenceCount(q)} evidências`;
+        li.textContent = `${ev.question} → ${(ev.results || []).length} evidências`;
         ul.appendChild(li);
     });
     summaryDiv.appendChild(ul);
-}
-
-// ========================================
-// 🔹 Renderiza evidências no painel central
-// ========================================
-function renderEvidence(question) {
-    // Remove evidências antigas
-    result.querySelectorAll(".evidence-card").forEach(c => c.remove());
-
-    const evidenceObj = currentData?.evidences?.find(ev => ev.question === question);
-    if (evidenceObj && evidenceObj.results.length > 0) {
-        const card = document.createElement("div");
-        card.classList.add("evidence-card");
-
-        const title = document.createElement("h3");
-        title.textContent = question;
-        card.appendChild(title);
-
-        const ul = document.createElement("ul");
-        evidenceObj.results.forEach(res => {
-            const li = document.createElement("li");
-            // Show source badge and label for RAG results
-            let sourceInfo = "";
-            if (res.source) {
-                sourceInfo = `<span class="source-badge">${res.source}</span> `;
-            }
-            if (res.label) {
-                sourceInfo += `<span class="label-badge-small label-${res.label.includes('fals') || res.label.includes('fake') || res.label.includes('enganoso') ? 'refuted' : res.label.includes('verdade') || res.label.includes('fato') ? 'supported' : 'uncertain'}">${res.label}</span> `;
-            }
-            li.innerHTML = `${sourceInfo}<a href="${res.link}" target="_blank">${res.title}</a><p>${res.snippet}</p>`;
-            ul.appendChild(li);
-        });
-
-        card.appendChild(ul);
-        result.appendChild(card);
-    } else {
-        const msg = document.createElement("p");
-        msg.textContent = "Nenhuma evidência encontrada para esta pergunta.";
-        result.appendChild(msg);
-    }
 }
 
 // ========================================
@@ -322,7 +332,7 @@ function renderHistoryEntry(entry, num) {
         <div class="history-header-top">
             <span class="history-index">#${num}</span>
             <span class="label-badge ${labelClass}">${(entry.label || "N/A").toUpperCase()}</span>
-            ${entry.confidence != null ? `<span class="confidence">${entry.confidence}%</span>` : ""}
+            ${entry.confidence != null ? `<span class="confidence">${entry.consistency_detail ? `${entry.confidence}% (${entry.consistency_detail.filter(v => v === entry.label).length}/${entry.consistency_detail.length})` : `${entry.confidence}%`}</span>` : ""}
             <span class="history-timestamp">${new Date(entry.timestamp).toLocaleString()}</span>
         </div>
         <div class="history-claim">${entry.claim}</div>
@@ -342,50 +352,55 @@ function renderHistoryEntry(entry, num) {
         body.appendChild(rat);
     }
 
-    // Questions
-    const questions = entry.questions?.questions || [];
-    if (questions.length > 0) {
-        const sec = document.createElement("div");
-        sec.classList.add("history-section");
-        sec.innerHTML = `<h4>🧩 Perguntas (${questions.length})</h4>`;
-        const ol = document.createElement("ol");
-        questions.forEach(q => { const li = document.createElement("li"); li.textContent = q; ol.appendChild(li); });
-        sec.appendChild(ol);
-        body.appendChild(sec);
-    }
-
-    // Evidence
+    // Q&A with Evidence (combined view)
     const evidences = entry.evidences || [];
-    let totalArticles = 0;
-    evidences.forEach(ev => { totalArticles += (ev.results || []).length; });
-    if (totalArticles > 0) {
+    if (evidences.length > 0) {
         const sec = document.createElement("div");
         sec.classList.add("history-section");
-        sec.innerHTML = `<h4>📰 Evidências (${totalArticles} artigos)</h4>`;
 
-        evidences.forEach(ev => {
-            if (!ev.results || ev.results.length === 0) return;
+        const totalArticles = evidences.reduce((sum, ev) => sum + (ev.results || []).length, 0);
+        sec.innerHTML = `<h4>🧩 Perguntas, Respostas & Evidências (${evidences.length} perguntas, ${totalArticles} artigos)</h4>`;
+
+        evidences.forEach((ev, idx) => {
+            // Question
             const qDiv = document.createElement("div");
             qDiv.classList.add("history-evidence-question");
-            qDiv.textContent = ev.question;
+            qDiv.textContent = `${idx + 1}. ${ev.question}`;
             sec.appendChild(qDiv);
 
-            const ul = document.createElement("ul");
-            ev.results.forEach(r => {
-                const li = document.createElement("li");
-                let info = "";
-                if (r.source) info += `<span class="source-badge">${r.source}</span> `;
-                if (r.label) {
-                    const lc = r.label.includes("fals") || r.label.includes("fake") || r.label.includes("enganoso")
-                        ? "refuted" : r.label.includes("verdade") || r.label.includes("fato") ? "supported" : "uncertain";
-                    info += `<span class="label-badge-small label-${lc}">${r.label}</span> `;
-                }
-                li.innerHTML = `${info}<a href="${r.link}" target="_blank">${r.title}</a>`;
-                if (r.score != null) li.innerHTML += ` <span class="history-score">(${r.score.toFixed(4)})</span>`;
-                ul.appendChild(li);
-            });
-            sec.appendChild(ul);
+            // Answer
+            if (ev.answer) {
+                const ansDiv = document.createElement("div");
+                ansDiv.style.cssText = "font-size:0.85rem;color:#93c5fd;margin:4px 0 6px 20px;padding:6px 10px;background:#162544;border-radius:6px;border:1px solid #1e3a5f;";
+                ansDiv.innerHTML = `<strong>💬</strong> ${ev.answer}`;
+                sec.appendChild(ansDiv);
+            }
+
+            // Evidence articles
+            if (ev.results && ev.results.length > 0) {
+                const ul = document.createElement("ul");
+                ev.results.forEach(r => {
+                    const li = document.createElement("li");
+                    let info = "";
+                    if (r.source) info += `<span class="source-badge">${r.source}</span> `;
+                    if (r.label) {
+                        const lc = r.label.includes("fals") || r.label.includes("fake") || r.label.includes("enganoso")
+                            ? "refuted" : r.label.includes("verdade") || r.label.includes("fato") ? "supported" : "uncertain";
+                        info += `<span class="label-badge-small label-${lc}">${r.label}</span> `;
+                    }
+                    li.innerHTML = `${info}<a href="${r.link}" target="_blank">${r.title}</a>`;
+                    if (r.score != null) li.innerHTML += ` <span class="history-score">(${r.score.toFixed(4)})</span>`;
+                    ul.appendChild(li);
+                });
+                sec.appendChild(ul);
+            } else {
+                const noEv = document.createElement("p");
+                noEv.style.cssText = "font-size:0.8rem;color:#64748b;font-style:italic;margin:2px 0 8px 20px;";
+                noEv.textContent = "Nenhuma evidência encontrada.";
+                sec.appendChild(noEv);
+            }
         });
+
         body.appendChild(sec);
     }
 

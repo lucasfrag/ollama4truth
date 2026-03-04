@@ -12,6 +12,7 @@ import json
 import time
 import requests
 from urllib.parse import quote_plus
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 
 from dotenv import load_dotenv
@@ -63,8 +64,54 @@ def google_search(query: str, num_results: int = 5):
         return []
 
 
+def fetch_article_text(url: str, timeout: int = 10) -> str:
+    """
+    Fetch a web page and extract its main article text using trafilatura.
+    Returns the extracted text, or empty string on failure.
+    """
+    try:
+        import trafilatura
+        response = requests.get(url, timeout=timeout, headers={
+            "User-Agent": "Mozilla/5.0 (compatible; Ollama4Truth/1.0; academic research)"
+        })
+        response.raise_for_status()
+        text = trafilatura.extract(response.text, include_comments=False, include_tables=False)
+        if text:
+            print(f"[WEB] Extracted {len(text)} chars from: {url[:80]}")
+            return text
+        else:
+            print(f"[WEB] No text extracted from: {url[:80]}")
+            return ""
+    except Exception as e:
+        print(f"[WEB] Failed to fetch {url[:80]}: {e}")
+        return ""
+
+
+def _enrich_with_full_text(results: list, max_workers: int = 5):
+    """
+    Fetch full article text for each Google result concurrently.
+    Adds 'full_text' field to each result dict in-place.
+    Falls back to the Google snippet if fetching fails.
+    """
+    if not results:
+        return
+
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        future_to_result = {
+            executor.submit(fetch_article_text, r["link"]): r
+            for r in results if r.get("link")
+        }
+        for future in as_completed(future_to_result):
+            r = future_to_result[future]
+            try:
+                text = future.result()
+                r["full_text"] = text if text else r.get("snippet", "")
+            except Exception:
+                r["full_text"] = r.get("snippet", "")
+
+
 def _retrieve_web(claim: str, questions: list) -> dict:
-    """Original web-only retrieval."""
+    """Web retrieval with full article text extraction."""
     all_evidence = {
         "claim": claim,
         "timestamp": datetime.utcnow().isoformat(),
@@ -74,6 +121,11 @@ def _retrieve_web(claim: str, questions: list) -> dict:
     for q in questions:
         print(f"[WEB] Buscando evidências para: {q}")
         results = google_search(q)
+
+        # Fetch full article text from each URL
+        print(f"[WEB] Fetching full text for {len(results)} results...")
+        _enrich_with_full_text(results)
+
         all_evidence["evidences"].append({
             "question": q,
             "results": results
@@ -99,22 +151,13 @@ def _retrieve_rag(claim: str, questions: list, retrieval_method: str = None) -> 
         "mode": "rag",
     }
 
-    seen_urls = set()  # Deduplicate across questions
-
     for q in questions:
         print(f"[RAG] Buscando: {q} [method={retrieval_method or 'default'}]")
         results = _rag_index.retrieve(q, k=5, method=retrieval_method)
 
-        # Deduplicate: skip articles already returned for earlier questions
-        unique_results = []
-        for r in results:
-            if r["link"] not in seen_urls:
-                seen_urls.add(r["link"])
-                unique_results.append(r)
-
         all_evidence["evidences"].append({
             "question": q,
-            "results": unique_results,
+            "results": results,
         })
 
     total = sum(len(e["results"]) for e in all_evidence["evidences"])
