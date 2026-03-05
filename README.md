@@ -1,4 +1,4 @@
-# 🧠 Ollama4Truth — Fact-Checking with RAG + Ollama
+# 🧠 InvestigA — Fact-Checking with RAG + Ollama
 
 An automated fact-checking system that verifies claims against a curated corpus of **19,502 Brazilian fact-checking articles** using Retrieval-Augmented Generation (RAG) and local LLMs via [Ollama](https://ollama.com). Developed as part of a **CNPq-funded research project** on combating disinformation in Brazil.
 
@@ -57,7 +57,7 @@ ssh -L 8000:localhost:8000 <server>
 ## 📁 Project Structure
 
 ```
-ollama4truth/
+InvestigA/
 ├── api.py                       # FastAPI server + static file serving
 ├── main.py                      # Pipeline orchestrator (init_rag, run_pipeline)
 ├── .env                         # Configuration (GPU, model, paths)
